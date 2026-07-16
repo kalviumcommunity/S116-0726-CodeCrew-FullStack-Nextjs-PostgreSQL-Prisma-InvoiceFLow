@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import AppShell from "@/components/layout/AppShell";
 import {
     ArrowLeft,
     CircleCheck,
@@ -84,104 +85,110 @@ export default function InvoicesResultsPage() {
     }, [activeTab, searchTerm, filterActive]);
 
     if (loading) {
-        return <InvoiceResultsSkeleton />;
+        return (
+            <AppShell title="Invoice Results" subtitle="Review validation outcomes and invoice-level status for the selected upload.">
+                <InvoiceResultsSkeleton />
+            </AppShell>
+        );
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                    <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-                        <Link href="/dashboard" className="hover:text-violet-600">
-                            Dashboard
-                        </Link>
-                        <span>/</span>
-                        <Link href="/history" className="hover:text-violet-600">
-                            Upload History
-                        </Link>
-                        <span>/</span>
-                        <span className="text-slate-700">July_Invoices.csv</span>
-                    </div>
-                    <div className="mt-4 flex flex-wrap items-center gap-3">
-                        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-                            July_Invoices.csv
-                        </h1>
-                        <Badge variant="success">Completed</Badge>
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-500">
-                        <span>Uploaded on: 12 Jul 2024, 10:30 AM</span>
-                        <span>Total Invoices: 1,250</span>
-                        <span>File Size: 8.4 MB</span>
-                    </div>
-                </div>
-                <Button className="bg-violet-600 hover:bg-violet-700">
-                    <Download className="mr-2 h-4 w-4" />
-                    Download Report
-                </Button>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                {summaryCards.map((card) => {
-                    const Icon = card.icon;
-                    return (
-                        <InvoiceSummaryCard
-                            key={card.title}
-                            title={card.title}
-                            value={card.value}
-                            icon={Icon}
-                            accent={card.accent}
-                        />
-                    );
-                })}
-            </div>
-
-            <Card className="border-slate-200 shadow-sm">
-                <CardHeader className="flex flex-col gap-4 border-b border-slate-200 p-6 md:flex-row md:items-center md:justify-between">
-                    <CardTitle className="text-xl">Invoice Results</CardTitle>
-                    <InvoiceTabs
-                        activeTab={activeTab}
-                        onChange={setActiveTab}
-                        counts={{
-                            all: invoiceRows.length,
-                            mismatch: invoiceRows.filter((invoice) => invoice.status === "MISMATCH").length,
-                            failed: invoiceRows.filter((invoice) => invoice.status === "FAILED").length,
-                        }}
-                    />
-                </CardHeader>
-                <CardContent className="p-6">
-                    <div className="mb-5 flex items-center justify-between gap-3">
-                        <InvoiceSearch
-                            searchTerm={searchTerm}
-                            onSearchChange={setSearchTerm}
-                            filterActive={filterActive}
-                            onFilterToggle={() => setFilterActive((prev) => !prev)}
-                        />
-                    </div>
-
-                    <InvoiceTable invoices={filteredInvoices} />
-
-                    <div className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-                        <p>Showing 1–{Math.min(filteredInvoices.length, 10)} of {filteredInvoices.length} results</p>
-                        <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm">
-                                Previous
-                            </Button>
-                            <Button size="sm" className="bg-violet-600 hover:bg-violet-700">
-                                1
-                            </Button>
-                            <Button variant="outline" size="sm">
-                                2
-                            </Button>
-                            <Button variant="outline" size="sm">
-                                3
-                            </Button>
-                            <Button variant="outline" size="sm">
-                                Next
-                            </Button>
+        <AppShell title="Invoice Results" subtitle="Review validation outcomes and invoice-level status for the selected upload.">
+            <div className="space-y-6">
+                <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                            <Link href="/dashboard" className="hover:text-violet-600">
+                                Dashboard
+                            </Link>
+                            <span>/</span>
+                            <Link href="/history" className="hover:text-violet-600">
+                                Upload History
+                            </Link>
+                            <span>/</span>
+                            <span className="text-slate-700">July_Invoices.csv</span>
+                        </div>
+                        <div className="mt-4 flex flex-wrap items-center gap-3">
+                            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+                                July_Invoices.csv
+                            </h1>
+                            <Badge variant="success">Completed</Badge>
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-500">
+                            <span>Uploaded on: 12 Jul 2024, 10:30 AM</span>
+                            <span>Total Invoices: 1,250</span>
+                            <span>File Size: 8.4 MB</span>
                         </div>
                     </div>
-                </CardContent>
-            </Card>
-        </div>
+                    <Button className="bg-violet-600 hover:bg-violet-700">
+                        <Download className="mr-2 h-4 w-4" />
+                        Download Report
+                    </Button>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    {summaryCards.map((card) => {
+                        const Icon = card.icon;
+                        return (
+                            <InvoiceSummaryCard
+                                key={card.title}
+                                title={card.title}
+                                value={card.value}
+                                icon={Icon}
+                                accent={card.accent}
+                            />
+                        );
+                    })}
+                </div>
+
+                <Card className="border-slate-200 shadow-sm">
+                    <CardHeader className="flex flex-col gap-4 border-b border-slate-200 p-6 md:flex-row md:items-center md:justify-between">
+                        <CardTitle className="text-xl">Invoice Results</CardTitle>
+                        <InvoiceTabs
+                            activeTab={activeTab}
+                            onChange={setActiveTab}
+                            counts={{
+                                all: invoiceRows.length,
+                                mismatch: invoiceRows.filter((invoice) => invoice.status === "MISMATCH").length,
+                                failed: invoiceRows.filter((invoice) => invoice.status === "FAILED").length,
+                            }}
+                        />
+                    </CardHeader>
+                    <CardContent className="p-6">
+                        <div className="mb-5 flex items-center justify-between gap-3">
+                            <InvoiceSearch
+                                searchTerm={searchTerm}
+                                onSearchChange={setSearchTerm}
+                                filterActive={filterActive}
+                                onFilterToggle={() => setFilterActive((prev) => !prev)}
+                            />
+                        </div>
+
+                        <InvoiceTable invoices={filteredInvoices} />
+
+                        <div className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+                            <p>Showing 1–{Math.min(filteredInvoices.length, 10)} of {filteredInvoices.length} results</p>
+                            <div className="flex items-center gap-2">
+                                <Button variant="outline" size="sm">
+                                    Previous
+                                </Button>
+                                <Button size="sm" className="bg-violet-600 hover:bg-violet-700">
+                                    1
+                                </Button>
+                                <Button variant="outline" size="sm">
+                                    2
+                                </Button>
+                                <Button variant="outline" size="sm">
+                                    3
+                                </Button>
+                                <Button variant="outline" size="sm">
+                                    Next
+                                </Button>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        </AppShell>
     );
 }
