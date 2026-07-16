@@ -1,3 +1,8 @@
+import Link from 'next/link';
+import AppShell from '@/components/layout/AppShell';
+import { Button } from '@/components/ui/button';
+import { uploads } from '@/data/uploads';
+
 type IconProps = {
   className?: string;
 };
@@ -177,40 +182,19 @@ const stats = [
   },
 ];
 
-const recentUploads = [
-  {
-    fileName: "gst_april_2026.csv",
-    uploadedOn: "14 Jul 2026, 09:42 AM",
-    totalInvoices: 248,
-    status: "Completed",
-    progress: 100,
-    badgeClass: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  },
-  {
-    fileName: "vendor_invoices_q2.csv",
-    uploadedOn: "14 Jul 2026, 09:18 AM",
-    totalInvoices: 184,
-    status: "Processing",
-    progress: 72,
-    badgeClass: "bg-amber-50 text-amber-700 ring-amber-200",
-  },
-  {
-    fileName: "purchase_bills_june.csv",
-    uploadedOn: "13 Jul 2026, 06:08 PM",
-    totalInvoices: 96,
-    status: "Failed",
-    progress: 34,
-    badgeClass: "bg-rose-50 text-rose-700 ring-rose-200",
-  },
-  {
-    fileName: "export_sales_register.csv",
-    uploadedOn: "13 Jul 2026, 03:27 PM",
-    totalInvoices: 312,
-    status: "Completed",
-    progress: 100,
-    badgeClass: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  },
-];
+const recentUploads = uploads.map((upload) => ({
+  id: upload.id,
+  fileName: upload.fileName,
+  uploadedOn: upload.uploadDate,
+  totalInvoices: upload.totalRows,
+  status: upload.status === 'COMPLETED' ? 'Completed' : upload.status === 'FAILED' ? 'Failed' : 'Processing',
+  progress: upload.status === 'COMPLETED' ? 100 : upload.status === 'FAILED' ? 34 : 72,
+  badgeClass: upload.status === 'COMPLETED'
+    ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+    : upload.status === 'FAILED'
+      ? 'bg-rose-50 text-rose-700 ring-rose-200'
+      : 'bg-amber-50 text-amber-700 ring-amber-200',
+}));
 
 function StatusBadge({
   status,
@@ -228,238 +212,144 @@ function StatusBadge({
 
 export default function DashboardPage() {
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="mx-auto flex min-h-screen w-full max-w-380">
-        <aside className="hidden w-63 shrink-0 border-r border-slate-200 bg-white/95 px-5 py-6 shadow-sm lg:flex lg:flex-col">
-          <div className="flex items-center gap-3 rounded-2xl border border-violet-100 bg-violet-50 px-4 py-4">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-linear-to-br from-violet-600 to-fuchsia-500 text-white shadow-lg shadow-violet-200">
-              <LogoMark className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-violet-600">InvoiceFlow</p>
-              <p className="text-sm text-slate-500">Bulk invoice processing</p>
-            </div>
-          </div>
+    <AppShell title="Dashboard" subtitle="Overview of uploads, processing health, and recent activity">
+      <div className="flex w-full flex-col gap-6">
+        <section className="rounded-xl border border-slate-200 bg-white px-5 py-5 shadow-sm sm:px-6 sm:py-6">
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-violet-600">Welcome back</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 sm:text-[2rem]">
+            Hello, Priya👋
+          </h1>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 sm:text-[0.98rem]">
+            Here&apos;s what&apos;s happening with your invoice uploads, background jobs, and recent processing activity today.
+          </p>
+        </section>
 
-          <nav className="mt-8 flex flex-1 flex-col gap-2">
-            {sidebarItems.map((item) => {
-              const Icon = item.icon;
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {stats.map((stat) => {
+            const Icon = stat.icon;
 
-              return (
-                <a
-                  key={item.label}
-                  href="#"
-                  className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                    item.active
-                      ? "bg-violet-600 text-white shadow-lg shadow-violet-200"
-                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </a>
-              );
-            })}
-          </nav>
-
-          <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-sm font-semibold text-slate-950">Processing health</p>
-            <p className="mt-1 text-sm text-slate-500">8 jobs completed today</p>
-            <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200">
-              <div className="h-full w-[82%] rounded-full bg-linear-to-r from-violet-600 to-fuchsia-500" />
-            </div>
-            <p className="mt-2 text-xs text-slate-500">82% capacity used</p>
-          </div>
-        </aside>
-
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50/90 backdrop-blur">
-            <div className="flex items-center justify-between gap-4 px-6 py-4 lg:px-8">
-              <div className="flex items-center gap-3">
-                <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm lg:hidden">
-                  <MenuIcon className="h-5 w-5" />
-                </button>
-                <div className="hidden flex-col sm:flex">
-                  <span className="text-sm font-medium text-slate-500">Bulk invoice upload</span>
-                  <span className="text-lg font-semibold tracking-tight text-slate-950">Dashboard</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 sm:gap-4">
-                <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm">
-                  <BellIcon className="h-5 w-5" />
-                </button>
-
-                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-                  <AvatarBadge />
-                  <div className="hidden min-w-0 sm:block">
-                    <p className="truncate text-sm font-semibold text-slate-950">Priya Sharma</p>
-                    <p className="truncate text-xs text-slate-500">Apex Finance Pvt. Ltd.</p>
+            return (
+              <article key={stat.title} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-slate-500">{stat.title}</p>
+                    <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{stat.value}</p>
+                  </div>
+                  <div className={`rounded-2xl bg-linear-to-br ${stat.accent} p-3 text-white shadow-sm`}>
+                    <Icon className="h-5 w-5" />
                   </div>
                 </div>
+                <p className="mt-4 text-sm text-slate-500">{stat.trend}</p>
+              </article>
+            );
+          })}
+        </section>
+
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-2xl">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
+                <UploadCloudIcon className="h-6 w-6" />
               </div>
+              <h2 className="mt-4 text-xl font-semibold tracking-tight text-slate-950">
+                Upload your CSV file
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Start a new invoice import and keep your processing queue moving.
+              </p>
             </div>
-          </header>
 
-          <main className="flex-1 px-6 py-6 lg:px-8 lg:py-8">
-            <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-              <section className="rounded-xl border border-slate-200 bg-white px-5 py-5 shadow-sm sm:px-6 sm:py-6">
-                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-violet-600">Welcome back</p>
-                <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 sm:text-[2rem]">
-                  Hello, Priya👋
-                </h1>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 sm:text-[0.98rem]">
-                  Here&apos;s what&apos;s happening with your invoice uploads, background jobs, and recent processing activity today.
-                </p>
-              </section>
+            <Link
+              href="/upload"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700"
+            >
+              <UploadCloudIcon className="h-4 w-4" />
+              Upload New CSV
+            </Link>
+          </div>
+        </section>
 
-              <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {stats.map((stat) => {
-                  const Icon = stat.icon;
+        <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-col gap-2 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-6">
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight text-slate-950">Recent Uploads</h2>
+              <p className="mt-1 text-sm text-slate-500">Professional table view of recent invoice CSV uploads.</p>
+            </div>
+            <div className="inline-flex items-center gap-2 self-start rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 sm:self-auto">
+              <ClockIcon className="h-3.5 w-3.5" />
+              Live processing queue
+            </div>
+          </div>
 
-                  return (
-                    <article key={stat.title} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="text-sm font-medium text-slate-500">{stat.title}</p>
-                          <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{stat.value}</p>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50/80">
+                <tr>
+                  {[
+                    "File Name",
+                    "Uploaded On",
+                    "Total Invoices",
+                    "Status",
+                    "Progress",
+                    "Action",
+                  ].map((heading) => (
+                    <th key={heading} scope="col" className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 sm:px-6">
+                      {heading}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {recentUploads.map((upload) => (
+                  <tr key={upload.fileName} className="transition-colors hover:bg-slate-50/70">
+                    <td className="px-5 py-4 sm:px-6">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600 ring-1 ring-violet-100">
+                          <FileIcon className="h-4 w-4" />
                         </div>
-                        <div className={`rounded-2xl bg-linear-to-br ${stat.accent} p-3 text-white shadow-sm`}>
-                          <Icon className="h-5 w-5" />
+                        <div>
+                          <p className="font-medium text-slate-950">{upload.fileName}</p>
+                          <p className="text-sm text-slate-500">CSV upload</p>
                         </div>
                       </div>
-                      <p className="mt-4 text-sm text-slate-500">{stat.trend}</p>
-                    </article>
-                  );
-                })}
-              </section>
-
-              <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="max-w-2xl">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
-                      <UploadCloudIcon className="h-6 w-6" />
-                    </div>
-                    <h2 className="mt-4 text-xl font-semibold tracking-tight text-slate-950">
-                      Upload your CSV file
-                    </h2>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">
-                      Drag and drop your invoice export into the upload area below. This section is UI-only and designed to reflect a professional SaaS finance workflow.
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl border border-violet-100 bg-violet-50 px-4 py-3 text-sm text-violet-700">
-                    <p className="font-semibold">Background processing ready</p>
-                    <p className="mt-1 text-violet-600">Uploads will be queued for validation and parsing.</p>
-                  </div>
-                </div>
-
-                <div className="mt-5 rounded-xl border-2 border-dashed border-violet-200 bg-slate-50/80 p-5 sm:p-6">
-                  <div className="flex flex-col items-center justify-center text-center">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200">
-                      <UploadCloudIcon className="h-8 w-8 text-violet-600" />
-                    </div>
-                    <h3 className="mt-4 text-lg font-semibold text-slate-950">Drag and drop your CSV here</h3>
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-                      Upload a CSV export to review invoice counts, processing progress, and results from your finance workflow.
-                    </p>
-
-                    <button type="button" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700">
-                      <UploadCloudIcon className="h-4 w-4" />
-                      Choose File
-                    </button>
-
-                    <div className="mt-5 flex flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:gap-6">
-                      <span>Supports CSV format only</span>
-                      <span>Maximum file size: 25 MB</span>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-                <div className="flex flex-col gap-2 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-6">
-                  <div>
-                    <h2 className="text-xl font-semibold tracking-tight text-slate-950">Recent Uploads</h2>
-                    <p className="mt-1 text-sm text-slate-500">Professional table view of recent invoice CSV uploads.</p>
-                  </div>
-                  <div className="inline-flex items-center gap-2 self-start rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 sm:self-auto">
-                    <ClockIcon className="h-3.5 w-3.5" />
-                    Live processing queue
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-slate-200">
-                    <thead className="bg-slate-50/80">
-                      <tr>
-                        {[
-                          "File Name",
-                          "Uploaded On",
-                          "Total Invoices",
-                          "Status",
-                          "Progress",
-                          "Action",
-                        ].map((heading) => (
-                          <th key={heading} scope="col" className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 sm:px-6">
-                            {heading}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 bg-white">
-                      {recentUploads.map((upload) => (
-                        <tr key={upload.fileName} className="transition-colors hover:bg-slate-50/70">
-                          <td className="px-5 py-4 sm:px-6">
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600 ring-1 ring-violet-100">
-                                <FileIcon className="h-4 w-4" />
-                              </div>
-                              <div>
-                                <p className="font-medium text-slate-950">{upload.fileName}</p>
-                                <p className="text-sm text-slate-500">CSV upload</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-5 py-4 text-sm text-slate-600 sm:px-6">{upload.uploadedOn}</td>
-                          <td className="px-5 py-4 text-sm font-medium text-slate-900 sm:px-6">{upload.totalInvoices.toLocaleString()}</td>
-                          <td className="px-5 py-4 sm:px-6">
-                            <StatusBadge status={upload.status} badgeClass={upload.badgeClass} />
-                          </td>
-                          <td className="min-w-55 px-5 py-4 sm:px-6">
-                            <div className="flex items-center gap-3">
-                              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
-                                <div
-                                  className={`h-full rounded-full ${
-                                    upload.status === "Completed"
-                                      ? "bg-linear-to-r from-emerald-500 to-teal-500"
-                                      : upload.status === "Failed"
-                                        ? "bg-linear-to-r from-rose-500 to-red-500"
-                                        : "bg-linear-to-r from-violet-500 to-fuchsia-500"
-                                  }`}
-                                  style={{ width: `${upload.progress}%` }}
-                                />
-                              </div>
-                              <span className="w-10 text-right text-sm font-medium text-slate-600">{upload.progress}%</span>
-                            </div>
-                          </td>
-                          <td className="px-5 py-4 sm:px-6">
-                            <button type="button" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-violet-200 hover:text-violet-700">
-                              <EyeIcon className="h-4 w-4" />
-                              View
-                              <ArrowUpRightIcon className="h-4 w-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            </div>
-          </main>
-        </div>
+                    </td>
+                    <td className="px-5 py-4 text-sm text-slate-600 sm:px-6">{upload.uploadedOn}</td>
+                    <td className="px-5 py-4 text-sm font-medium text-slate-900 sm:px-6">{upload.totalInvoices.toLocaleString()}</td>
+                    <td className="px-5 py-4 sm:px-6">
+                      <StatusBadge status={upload.status} badgeClass={upload.badgeClass} />
+                    </td>
+                    <td className="min-w-55 px-5 py-4 sm:px-6">
+                      <div className="flex items-center gap-3">
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                          <div
+                            className={`h-full rounded-full ${upload.status === "Completed"
+                              ? "bg-linear-to-r from-emerald-500 to-teal-500"
+                              : upload.status === "Failed"
+                                ? "bg-linear-to-r from-rose-500 to-red-500"
+                                : "bg-linear-to-r from-violet-500 to-fuchsia-500"
+                              }`}
+                            style={{ width: `${upload.progress}%` }}
+                          />
+                        </div>
+                        <span className="w-10 text-right text-sm font-medium text-slate-600">{upload.progress}%</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 sm:px-6">
+                      <Button asChild variant="outline" size="sm" className="gap-2">
+                        <Link href={`/uploads/${upload.id}`}>
+                          <EyeIcon className="h-4 w-4" />
+                          View
+                          <ArrowUpRightIcon className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
-    </main>
+    </AppShell>
   );
 }
