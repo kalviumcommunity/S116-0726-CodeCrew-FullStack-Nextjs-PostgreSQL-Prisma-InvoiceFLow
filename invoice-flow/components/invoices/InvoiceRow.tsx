@@ -1,4 +1,3 @@
-import { FileText } from "lucide-react";
 import { InvoiceStatusBadge } from "@/components/invoices/InvoiceStatusBadge";
 import type { InvoiceRecord } from "@/components/invoices/data";
 
