@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import AppShell from '@/components/layout/AppShell';
-import { Button } from '@/components/ui/button';
+import LatestUploadsClient from '@/components/invoices/LatestUploadsClient';
+
 import { uploads } from '@/data/uploads';
 
 type IconProps = {
@@ -46,24 +47,6 @@ function ClockIcon({ className }: IconProps) {
   );
 }
 
-function EyeIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function ArrowUpRightIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M7 17 17 7" />
-      <path d="M8 7h9v9" />
-    </svg>
-  );
-}
-
 const stats = [
   {
     title: "Total Uploads",
@@ -95,7 +78,7 @@ const stats = [
   },
 ];
 
-const recentUploads = uploads.map((upload) => ({
+const recentUploads = uploads.slice(0, 3).map((upload) => ({
   id: upload.id,
   fileName: upload.fileName,
   uploadedOn: upload.uploadDate,
@@ -109,19 +92,6 @@ const recentUploads = uploads.map((upload) => ({
       : 'bg-amber-50 text-amber-700 ring-amber-200',
 }));
 
-function StatusBadge({
-  status,
-  badgeClass,
-}: {
-  status: string;
-  badgeClass: string;
-}) {
-  return (
-    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 ${badgeClass}`}>
-      {status}
-    </span>
-  );
-}
 
 export default function DashboardPage() {
   return (
@@ -182,86 +152,7 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-2 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-6">
-            <div>
-              <h2 className="text-xl font-semibold tracking-tight text-slate-950">Recent Uploads</h2>
-              <p className="mt-1 text-sm text-slate-500">Professional table view of recent invoice CSV uploads.</p>
-            </div>
-            <div className="inline-flex items-center gap-2 self-start rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 sm:self-auto">
-              <ClockIcon className="h-3.5 w-3.5" />
-              Live processing queue
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50/80">
-                <tr>
-                  {[
-                    "File Name",
-                    "Uploaded On",
-                    "Total Invoices",
-                    "Status",
-                    "Progress",
-                    "Action",
-                  ].map((heading) => (
-                    <th key={heading} scope="col" className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 sm:px-6">
-                      {heading}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {recentUploads.map((upload) => (
-                  <tr key={upload.fileName} className="transition-colors hover:bg-slate-50/70">
-                    <td className="px-5 py-4 sm:px-6">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600 ring-1 ring-violet-100">
-                          <FileIcon className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-slate-950">{upload.fileName}</p>
-                          <p className="text-sm text-slate-500">CSV upload</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-4 text-sm text-slate-600 sm:px-6">{upload.uploadedOn}</td>
-                    <td className="px-5 py-4 text-sm font-medium text-slate-900 sm:px-6">{upload.totalInvoices.toLocaleString()}</td>
-                    <td className="px-5 py-4 sm:px-6">
-                      <StatusBadge status={upload.status} badgeClass={upload.badgeClass} />
-                    </td>
-                    <td className="min-w-55 px-5 py-4 sm:px-6">
-                      <div className="flex items-center gap-3">
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
-                          <div
-                            className={`h-full rounded-full ${upload.status === "Completed"
-                              ? "bg-linear-to-r from-emerald-500 to-teal-500"
-                              : upload.status === "Failed"
-                                ? "bg-linear-to-r from-rose-500 to-red-500"
-                                : "bg-linear-to-r from-violet-500 to-fuchsia-500"
-                              }`}
-                            style={{ width: `${upload.progress}%` }}
-                          />
-                        </div>
-                        <span className="w-10 text-right text-sm font-medium text-slate-600">{upload.progress}%</span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-4 sm:px-6">
-                      <Button asChild variant="outline" size="sm" className="gap-2">
-                        <Link href={`/uploads/${upload.id}`}>
-                          <EyeIcon className="h-4 w-4" />
-                          View
-                          <ArrowUpRightIcon className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <LatestUploadsClient initialRecords={recentUploads} />
       </div>
     </AppShell>
   );
