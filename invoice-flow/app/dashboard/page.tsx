@@ -7,46 +7,6 @@ type IconProps = {
   className?: string;
 };
 
-function MenuIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M4 7h16" />
-      <path d="M4 12h16" />
-      <path d="M4 17h16" />
-    </svg>
-  );
-}
-
-function BellIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M15 17H9a3 3 0 0 1-3-3v-2a6 6 0 1 1 12 0v2a3 3 0 0 1-3 3Z" />
-      <path d="M10 17a2 2 0 0 0 4 0" />
-    </svg>
-  );
-}
-
-function LogoMark({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M6 9.5 12 4l6 5.5" />
-      <path d="M6 9.5V20h12V9.5" />
-      <path d="M9 20v-6h6v6" />
-    </svg>
-  );
-}
-
-function DashboardIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <rect x="3" y="3" width="7" height="7" rx="1.5" />
-      <rect x="14" y="3" width="7" height="7" rx="1.5" />
-      <rect x="3" y="14" width="7" height="7" rx="1.5" />
-      <rect x="14" y="14" width="7" height="7" rx="1.5" />
-    </svg>
-  );
-}
-
 function UploadCloudIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -86,34 +46,6 @@ function ClockIcon({ className }: IconProps) {
   );
 }
 
-function AvatarIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 20c1.7-3.5 4.8-5 8-5s6.3 1.5 8 5" />
-    </svg>
-  );
-}
-
-function SettingsIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z" />
-      <path d="M19.4 15a7.9 7.9 0 0 0 .1-6l1.6-1.1-2-3.4-1.8.7a8 8 0 0 0-5.3-3l-.3-1.9H10l-.3 1.9a8 8 0 0 0-5.3 3l-1.8-.7-2 3.4L2.2 9a7.9 7.9 0 0 0 .1 6l-1.6 1.1 2 3.4 1.8-.7a8 8 0 0 0 5.3 3l.3 1.9h4l.3-1.9a8 8 0 0 0 5.3-3l1.8.7 2-3.4-1.6-1.1Z" />
-    </svg>
-  );
-}
-
-function LogoutIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M10 17v2a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1v2" />
-      <path d="M3 12h12" />
-      <path d="m8 8-5 4 5 4" />
-    </svg>
-  );
-}
-
 function EyeIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -131,25 +63,6 @@ function ArrowUpRightIcon({ className }: IconProps) {
     </svg>
   );
 }
-
-function AvatarBadge() {
-  return (
-    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-linear-to-br from-violet-600 to-fuchsia-500 text-sm font-semibold text-white shadow-md shadow-violet-200">
-      PK
-    </div>
-  );
-}
-
-const sidebarItems = [
-  { label: "Dashboard", icon: DashboardIcon, active: true },
-  { label: "Upload CSV", icon: UploadCloudIcon },
-  { label: "Upload History", icon: ClockIcon },
-  { label: "Invoice Results", icon: FileIcon },
-  { label: "Processing Jobs", icon: ClockIcon },
-  { label: "Profile", icon: AvatarIcon },
-  { label: "Settings", icon: SettingsIcon },
-  { label: "Logout", icon: LogoutIcon },
-];
 
 const stats = [
   {
