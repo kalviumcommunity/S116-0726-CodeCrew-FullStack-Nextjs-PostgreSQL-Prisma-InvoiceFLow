@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Readable } from "stream";
 import csv from "csv-parser";
+import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
@@ -104,6 +105,61 @@ function validateRow(row: ParsedInvoiceRow, rowNumber: number): ValidationError[
     return errors;
 }
 
+// Save upload record and its invoices to the database.
+// Returns summary counts and the upload id.
+async function saveUploadAndInvoices(fileName: string, validatedRows: ParsedInvoiceRowResult[]) {
+    // Create Upload record first
+    const upload = await prisma.upload.create({
+        data: {
+            fileName,
+            uploadDate: new Date(),
+            status: "PROCESSING",
+            totalRows: validatedRows.length,
+            successfulRows: 0,
+            failedRows: 0,
+        },
+    });
+
+    const invoicesToCreate = validatedRows
+        .filter((r) => r.valid)
+        .map((r) => ({
+            invoiceNumber: r.data.invoiceNumber,
+            customerName: r.data.customerName,
+            invoiceDate: new Date(r.data.invoiceDate),
+            amount: r.data.amount,
+            status: "PROCESSING",
+            errorMessage: null,
+            uploadId: upload.id,
+        }));
+
+    let savedRows = 0;
+    try {
+        if (invoicesToCreate.length > 0) {
+            await prisma.invoice.createMany({ data: invoicesToCreate });
+            savedRows = invoicesToCreate.length;
+        }
+
+        const failedCount = validatedRows.length - savedRows;
+        await prisma.upload.update({
+            where: { id: upload.id },
+            data: {
+                successfulRows: savedRows,
+                failedRows: failedCount,
+                status: "COMPLETED",
+            },
+        });
+    } catch (err) {
+        // Mark upload as failed on DB error
+        await prisma.upload.update({
+            where: { id: upload.id },
+            data: { status: "FAILED", failedRows: validatedRows.length },
+        });
+        throw err;
+    }
+
+    return { uploadId: upload.id, savedRows, failedRows: validatedRows.length - savedRows };
+}
+
 export async function POST(request: NextRequest) {
     try {
         const formData = await request.formData();
@@ -148,20 +204,31 @@ export async function POST(request: NextRequest) {
         const failedRows = validatedRows.length - validRows;
         const errors = validatedRows.flatMap((row) => row.errors);
 
-        // TODO: Save Upload record using Prisma
-        // TODO: Save Invoice records using Prisma
+        // Save upload and invoices using helper
+        try {
+            const result = await saveUploadAndInvoices(file.name, validatedRows);
 
-        return NextResponse.json(
-            {
-                success: true,
-                totalRows: validatedRows.length,
-                validRows,
-                failedRows,
-                errors,
-                data: validatedRows,
-            },
-            { status: 200 }
-        );
+            return NextResponse.json(
+                {
+                    success: true,
+                    uploadId: result.uploadId,
+                    totalRows: validatedRows.length,
+                    savedRows: result.savedRows,
+                    failedRows: result.failedRows,
+                    errors,
+                },
+                { status: 200 }
+            );
+        } catch (dbErr) {
+            console.error("Database error during upload save", dbErr);
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: "Database error while saving upload/invoices",
+                },
+                { status: 500 }
+            );
+        }
     } catch (error) {
         console.error("CSV upload processing failed", error);
 
