@@ -9,7 +9,6 @@ import {
   FileSpreadsheet,
   FolderOpen,
   Search,
-  Upload,
   AlertCircle,
   ArrowUpRight,
 } from "lucide-react";
@@ -110,6 +109,10 @@ export default function HistoryPage() {
       return matchesSearch && matchesStatus;
     });
   }, [searchTerm, statusFilter]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(filteredRecords.length / pageSize));
+  const paginatedRecords = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   if (loading) {
     return (
@@ -131,12 +134,6 @@ export default function HistoryPage() {
               View and monitor all previously uploaded invoice files.
             </p>
           </div>
-          <Button asChild className="w-full sm:w-auto">
-            <Link href="/uploads">
-              <Upload className="mr-2 h-4 w-4" />
-              Upload New CSV
-            </Link>
-          </Button>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -163,7 +160,7 @@ export default function HistoryPage() {
         <Card>
           <CardHeader className="flex flex-col gap-4 border-b border-slate-200 p-6 md:flex-row md:items-center md:justify-between">
             <div>
-              <CardTitle className="text-xl">Recent Uploads</CardTitle>
+              <CardTitle className="text-xl">Upload History Records</CardTitle>
               <p className="mt-1 text-sm text-slate-500">
                 Track processing progress and inspect historical file outcomes.
               </p>
@@ -191,7 +188,7 @@ export default function HistoryPage() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            {filteredRecords.length === 0 ? (
+            {paginatedRecords.length === 0 ? (
               <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
                 <div className="mb-4 rounded-full bg-slate-100 p-4 text-slate-600">
                   <FolderOpen className="h-8 w-8" />
@@ -200,12 +197,6 @@ export default function HistoryPage() {
                 <p className="mt-1 max-w-sm text-sm text-slate-500">
                   Try another search term or upload your first CSV to get started.
                 </p>
-                <Button asChild className="mt-6">
-                  <Link href="/uploads">
-                    <Upload className="mr-2 h-4 w-4" />
-                    Upload your first CSV
-                  </Link>
-                </Button>
               </div>
             ) : (
               <>
@@ -223,7 +214,7 @@ export default function HistoryPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredRecords.map((record) => (
+                      {paginatedRecords.map((record) => (
                         <TableRow key={record.id}>
                           <TableCell className="font-medium text-slate-900">{record.fileName}</TableCell>
                           <TableCell>{record.uploadDate}</TableCell>
@@ -246,7 +237,7 @@ export default function HistoryPage() {
                 </div>
 
                 <div className="space-y-4 p-4 lg:hidden">
-                  {filteredRecords.map((record) => (
+                  {paginatedRecords.map((record) => (
                     <div key={record.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -285,6 +276,26 @@ export default function HistoryPage() {
               </>
             )}
           </CardContent>
+          <div className="flex items-center justify-between gap-4 border-t border-slate-100 p-4">
+            <p className="text-sm text-slate-500">Showing {Math.min(filteredRecords.length, (currentPage-1)*pageSize + 1)} - {Math.min(filteredRecords.length, currentPage*pageSize)} of {filteredRecords.length}</p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="rounded-md px-3 py-1 text-sm border border-slate-200 bg-white disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-slate-600">Page {currentPage} of {totalPages}</span>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="rounded-md px-3 py-1 text-sm border border-slate-200 bg-white disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </Card>
       </div>
     </AppShell>

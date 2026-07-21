@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 
 type AuthMode = 'login' | 'signup';
 
@@ -110,7 +111,7 @@ export function AuthForm({ mode }: AuthFormProps) {
               className="absolute inset-y-0 right-3 flex items-center text-sm font-medium text-cyan-400"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
-              {showPassword ? 'Hide' : 'Show'}
+              {showPassword ? <Eye className="h-5 w-5 text-cyan-300" /> : <EyeOff className="h-5 w-5 text-cyan-400" />}
             </button>
           </div>
         </label>
