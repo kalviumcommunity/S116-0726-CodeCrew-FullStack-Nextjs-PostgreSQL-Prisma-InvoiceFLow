@@ -67,68 +67,50 @@ function validateRow(row: ParsedInvoiceRow, rowNumber: number): ValidationError[
     return errors;
 }
 
-/**
- * Runs AFTER the response has already been sent to the client.
- * This is what gives us "background processing" without a real job
- * queue: each row is compared against existing invoices in the DB to
- * decide MATCH vs MISMATCH, and the Upload row's counters are updated
- * as we go so the frontend can poll and see progress move.
- *
- * A duplicate invoiceNumber (from ANY previous upload) with different
- * customerName / amount / invoiceDate is treated as a MISMATCH.
- * A duplicate with identical data, or no duplicate at all, is a MATCH.
- */
-async function processInvoicesInBackground(uploadId: string) {
+async function matchInvoices(uploadId: string) {
     const pendingInvoices = await prisma.invoice.findMany({
         where: { uploadId, status: "PROCESSING" },
     });
 
-    let matchCount = 0;
-    let mismatchCount = 0;
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
     for (const invoice of pendingInvoices) {
-        const conflict = await prisma.invoice.findFirst({
-            where: {
-                invoiceNumber: invoice.invoiceNumber,
-                id: { not: invoice.id },
-                OR: [
-                    { customerName: { not: invoice.customerName } },
-                    { amount: { not: invoice.amount } },
-                    { invoiceDate: { not: invoice.invoiceDate } },
-                ],
-            },
-        });
+        const isOld = invoice.invoiceDate < oneYearAgo;
+        const isZeroAmount = Number(invoice.amount) === 0;
 
-        if (conflict) {
-            mismatchCount += 1;
+        if (isOld || isZeroAmount) {
+            const reasons: string[] = [];
+            if (isOld) reasons.push("Invoice date is more than 1 year old");
+            if (isZeroAmount) reasons.push("Amount is zero");
+
             await prisma.invoice.update({
                 where: { id: invoice.id },
                 data: {
                     status: "MISMATCH",
-                    errorMessage: `Conflicts with an earlier invoice ${invoice.invoiceNumber} (different customer, amount, or date)`,
+                    errorMessage: reasons.join("; "),
                 },
             });
         } else {
-            matchCount += 1;
             await prisma.invoice.update({
                 where: { id: invoice.id },
                 data: { status: "MATCH", errorMessage: null },
             });
         }
-
-        // Small delay so progress is visibly incremental in a demo.
-        // Safe to remove/shrink this for real production volumes.
-        await new Promise((resolve) => setTimeout(resolve, 120));
     }
 
-    const failedCount = await prisma.invoice.count({ where: { uploadId, status: "FAILED" } });
+    const [matchCount, mismatchCount, failedCount] = await Promise.all([
+        prisma.invoice.count({ where: { uploadId, status: "MATCH" } }),
+        prisma.invoice.count({ where: { uploadId, status: "MISMATCH" } }),
+        prisma.invoice.count({ where: { uploadId, status: "FAILED" } }),
+    ]);
 
     await prisma.upload.update({
         where: { id: uploadId },
         data: {
             status: "COMPLETED",
             successfulRows: matchCount,
-            failedRows: failedCount + mismatchCount,
+            failedRows: mismatchCount + failedCount,
         },
     });
 }
@@ -207,14 +189,7 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Fire-and-forget: do NOT await this. The HTTP response returns
-        // now; matching happens after, and the frontend polls for status.
-        processInvoicesInBackground(upload.id).catch((err) => {
-            console.error("Background invoice processing failed", err);
-            prisma.upload
-                .update({ where: { id: upload.id }, data: { status: "FAILED" } })
-                .catch(() => { });
-        });
+        await matchInvoices(upload.id);
 
         return NextResponse.json(
             { success: true, uploadId: upload.id, totalRows: parsedRows.length },

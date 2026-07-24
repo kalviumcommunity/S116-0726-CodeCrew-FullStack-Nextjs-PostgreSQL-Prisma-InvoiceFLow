@@ -3,40 +3,52 @@ import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
-interface RouteContext {
-    params: Promise<{ uploadId: string }>;
-}
-
-// GET /api/uploads/:uploadId/invoices
-// Returns invoice rows already shaped to match the existing
-// InvoiceRecord type used by InvoiceTable/InvoiceStatusBadge, so the
-// frontend just swaps its mock array for this response.
-export async function GET(_request: NextRequest, context: RouteContext) {
+export async function GET(
+    request: NextRequest,
+    { params }: { params: Promise<{ uploadId: string }> }
+) {
     try {
-        const { uploadId } = await context.params;
+        const { uploadId } = await params;
+        const searchParams = request.nextUrl.searchParams;
 
-        const invoices = await prisma.invoice.findMany({
-            where: { uploadId },
-            orderBy: { invoiceDate: "asc" },
-        });
+        const page = Math.max(1, Number.parseInt(searchParams.get("page") ?? "1", 10) || 1);
+        const pageSize = Math.max(1, Number.parseInt(searchParams.get("pageSize") ?? "20", 10) || 20);
 
-        const shaped = invoices.map((invoice) => ({
-            id: invoice.id,
-            invoiceNumber: invoice.invoiceNumber,
-            customerName: invoice.customerName,
-            invoiceDate: new Date(invoice.invoiceDate).toLocaleDateString("en-GB", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
+        const [totalCount, invoices] = await Promise.all([
+            prisma.invoice.count({ where: { uploadId } }),
+            prisma.invoice.findMany({
+                where: { uploadId },
+                skip: (page - 1) * pageSize,
+                take: pageSize,
+                orderBy: { invoiceDate: "asc" },
+                select: {
+                    id: true,
+                    invoiceNumber: true,
+                    customerName: true,
+                    invoiceDate: true,
+                    amount: true,
+                    status: true,
+                    errorMessage: true,
+                },
             }),
-            amount: Number(invoice.amount),
-            status: invoice.status === "PROCESSING" ? "MISMATCH" : invoice.status, // safety fallback, shouldn't normally show as PROCESSING once completed
-            remarks: invoice.errorMessage ?? "-",
-        }));
+        ]);
 
-        return NextResponse.json({ success: true, invoices: shaped });
+        return NextResponse.json({
+            invoices: invoices.map((invoice) => ({
+                id: invoice.id,
+                invoiceNumber: invoice.invoiceNumber,
+                customerName: invoice.customerName,
+                invoiceDate: invoice.invoiceDate,
+                amount: Number(invoice.amount),
+                status: invoice.status,
+                errorMessage: invoice.errorMessage,
+            })),
+            page,
+            pageSize,
+            totalCount,
+        });
     } catch (error) {
         console.error("Failed to fetch invoices for upload", error);
-        return NextResponse.json({ success: false, error: "Failed to fetch invoices" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to fetch invoices" }, { status: 500 });
     }
 }
