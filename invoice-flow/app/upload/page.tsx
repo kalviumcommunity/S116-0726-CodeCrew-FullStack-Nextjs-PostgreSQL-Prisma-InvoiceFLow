@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, FileSpreadsheet, FileUp, Sparkles, Upload } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
@@ -9,9 +10,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 
 export default function UploadPage() {
-    const [selectedFile, setSelectedFile] = useState<string | null>(null);
+    const router = useRouter();
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadMessage, setUploadMessage] = useState("");
+    const [errorMessage, setErrorMessage] = useState("");
 
     const guidelines = useMemo(
         () => [
@@ -34,19 +37,44 @@ export default function UploadPage() {
         []
     );
 
-    const handleUpload = () => {
+    const handleUpload = async () => {
         if (!selectedFile) {
-            setUploadMessage("Please select a CSV file before uploading.");
+            setUploadMessage("");
+            setErrorMessage("Please select a CSV file before uploading.");
             return;
         }
 
         setIsUploading(true);
         setUploadMessage("");
+        setErrorMessage("");
 
-        window.setTimeout(() => {
+        try {
+            const formData = new FormData();
+            formData.append("file", selectedFile);
+
+            const response = await fetch("/api/upload", {
+                method: "POST",
+                body: formData,
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                setErrorMessage(data.error ?? "Upload failed. Please try again.");
+                setIsUploading(false);
+                return;
+            }
+
+            setUploadMessage(`Uploaded ${selectedFile.name}. Redirecting to results...`);
+
+            // Send the user straight to the results page for this upload,
+            // where it will poll /api/uploads/:id for live progress.
+            router.push(`/invoices_results?uploadId=${data.uploadId}`);
+        } catch (err) {
+            console.error("Upload request failed", err);
+            setErrorMessage("Something went wrong while uploading. Please try again.");
             setIsUploading(false);
-            setUploadMessage(`Queued ${selectedFile} for processing.`);
-        }, 800);
+        }
     };
 
     return (
@@ -94,16 +122,17 @@ export default function UploadPage() {
                                 accept=".csv"
                                 className="sr-only"
                                 onChange={(event) => {
-                                    const file = event.target.files?.[0];
-                                    setSelectedFile(file?.name ?? null);
+                                    const file = event.target.files?.[0] ?? null;
+                                    setSelectedFile(file);
                                     setUploadMessage("");
+                                    setErrorMessage("");
                                 }}
                             />
 
                             {selectedFile ? (
                                 <div className="mt-4 flex items-center justify-center gap-2 text-sm text-emerald-600">
                                     <CheckCircle2 className="h-4 w-4" />
-                                    <span>{selectedFile}</span>
+                                    <span>{selectedFile.name}</span>
                                 </div>
                             ) : null}
                         </div>
@@ -113,7 +142,8 @@ export default function UploadPage() {
                                 <Upload className="mr-2 h-4 w-4" />
                                 {isUploading ? "Uploading..." : "Upload CSV"}
                             </Button>
-                            {uploadMessage ? <p className="text-sm text-slate-600">{uploadMessage}</p> : null}
+                            {uploadMessage ? <p className="text-sm text-emerald-600">{uploadMessage}</p> : null}
+                            {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
                         </div>
 
                         <div className="grid gap-4 md:grid-cols-3">
