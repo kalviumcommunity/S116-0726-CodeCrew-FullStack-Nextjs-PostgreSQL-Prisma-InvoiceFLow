@@ -1,0 +1,4 @@
+invoiceNumber,customerName,invoiceDate,amount
+INV-DUP-100,Acme Corp,2026-01-01,100
+INV-DUP-101,Globex,2026-01-02,200
+INV-DUP-100,Acme Corp,2026-01-03,300

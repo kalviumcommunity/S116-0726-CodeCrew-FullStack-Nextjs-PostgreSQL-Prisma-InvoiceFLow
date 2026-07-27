@@ -163,11 +163,39 @@ export async function POST(request: NextRequest) {
             },
         });
 
+        const invoiceNumbersInCsv = parsedRows
+            .map((row) => row.invoiceNumber)
+            .filter((invoiceNumber) => invoiceNumber.length > 0);
+
+        const existingInvoices =
+            invoiceNumbersInCsv.length > 0
+                ? await prisma.invoice.findMany({
+                      where: { invoiceNumber: { in: invoiceNumbersInCsv } },
+                      select: { invoiceNumber: true },
+                  })
+                : [];
+
+        const existingInvoiceNumbers = new Set(
+            existingInvoices.map((invoice) => invoice.invoiceNumber)
+        );
+        const seenInCsv = new Set<string>();
+
         // Every CSV row becomes an Invoice row, valid or not, so the
         // results table always has one entry per input row.
         const rowsWithValidation = parsedRows.map((row, index) => {
             const rowNumber = index + 2; // +2: header row + 1-indexing
             const errors = validateRow(row, rowNumber);
+
+            if (row.invoiceNumber) {
+                if (
+                    existingInvoiceNumbers.has(row.invoiceNumber) ||
+                    seenInCsv.has(row.invoiceNumber)
+                ) {
+                    errors.push({ row: rowNumber, message: "Duplicate Invoice" });
+                }
+                seenInCsv.add(row.invoiceNumber);
+            }
+
             return { row, rowNumber, errors };
         });
 
