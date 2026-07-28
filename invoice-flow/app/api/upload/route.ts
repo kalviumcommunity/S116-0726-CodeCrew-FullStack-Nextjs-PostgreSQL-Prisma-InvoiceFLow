@@ -67,50 +67,68 @@ function validateRow(row: ParsedInvoiceRow, rowNumber: number): ValidationError[
     return errors;
 }
 
-async function matchInvoices(uploadId: string) {
+/**
+ * Runs AFTER the response has already been sent to the client.
+ * This is what gives us "background processing" without a real job
+ * queue: each row is compared against existing invoices in the DB to
+ * decide MATCH vs MISMATCH, and the Upload row's counters are updated
+ * as we go so the frontend can poll and see progress move.
+ *
+ * A duplicate invoiceNumber (from ANY previous upload) with different
+ * customerName / amount / invoiceDate is treated as a MISMATCH.
+ * A duplicate with identical data, or no duplicate at all, is a MATCH.
+ */
+async function processInvoicesInBackground(uploadId: string) {
     const pendingInvoices = await prisma.invoice.findMany({
         where: { uploadId, status: "PROCESSING" },
     });
 
-    const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    let matchCount = 0;
+    let mismatchCount = 0;
 
     for (const invoice of pendingInvoices) {
-        const isOld = invoice.invoiceDate < oneYearAgo;
-        const isZeroAmount = Number(invoice.amount) === 0;
+        const conflict = await prisma.invoice.findFirst({
+            where: {
+                invoiceNumber: invoice.invoiceNumber,
+                id: { not: invoice.id },
+                OR: [
+                    { customerName: { not: invoice.customerName } },
+                    { amount: { not: invoice.amount } },
+                    { invoiceDate: { not: invoice.invoiceDate } },
+                ],
+            },
+        });
 
-        if (isOld || isZeroAmount) {
-            const reasons: string[] = [];
-            if (isOld) reasons.push("Invoice date is more than 1 year old");
-            if (isZeroAmount) reasons.push("Amount is zero");
-
+        if (conflict) {
+            mismatchCount += 1;
             await prisma.invoice.update({
                 where: { id: invoice.id },
                 data: {
                     status: "MISMATCH",
-                    errorMessage: reasons.join("; "),
+                    errorMessage: `Conflicts with an earlier invoice ${invoice.invoiceNumber} (different customer, amount, or date)`,
                 },
             });
         } else {
+            matchCount += 1;
             await prisma.invoice.update({
                 where: { id: invoice.id },
                 data: { status: "MATCH", errorMessage: null },
             });
         }
+
+        if (process.env.DEMO_SLOWDOWN === "true") {
+            await new Promise((resolve) => setTimeout(resolve, 120));
+        }
     }
 
-    const [matchCount, mismatchCount, failedCount] = await Promise.all([
-        prisma.invoice.count({ where: { uploadId, status: "MATCH" } }),
-        prisma.invoice.count({ where: { uploadId, status: "MISMATCH" } }),
-        prisma.invoice.count({ where: { uploadId, status: "FAILED" } }),
-    ]);
+    const failedCount = await prisma.invoice.count({ where: { uploadId, status: "FAILED" } });
 
     await prisma.upload.update({
         where: { id: uploadId },
         data: {
             status: "COMPLETED",
             successfulRows: matchCount,
-            failedRows: mismatchCount + failedCount,
+            failedRows: failedCount + mismatchCount,
         },
     });
 }
@@ -145,11 +163,39 @@ export async function POST(request: NextRequest) {
             },
         });
 
+        const invoiceNumbersInCsv = parsedRows
+            .map((row) => row.invoiceNumber)
+            .filter((invoiceNumber) => invoiceNumber.length > 0);
+
+        const existingInvoices =
+            invoiceNumbersInCsv.length > 0
+                ? await prisma.invoice.findMany({
+                      where: { invoiceNumber: { in: invoiceNumbersInCsv } },
+                      select: { invoiceNumber: true },
+                  })
+                : [];
+
+        const existingInvoiceNumbers = new Set(
+            existingInvoices.map((invoice) => invoice.invoiceNumber)
+        );
+        const seenInCsv = new Set<string>();
+
         // Every CSV row becomes an Invoice row, valid or not, so the
         // results table always has one entry per input row.
         const rowsWithValidation = parsedRows.map((row, index) => {
             const rowNumber = index + 2; // +2: header row + 1-indexing
             const errors = validateRow(row, rowNumber);
+
+            if (row.invoiceNumber) {
+                if (
+                    existingInvoiceNumbers.has(row.invoiceNumber) ||
+                    seenInCsv.has(row.invoiceNumber)
+                ) {
+                    errors.push({ row: rowNumber, message: "Duplicate Invoice" });
+                }
+                seenInCsv.add(row.invoiceNumber);
+            }
+
             return { row, rowNumber, errors };
         });
 
@@ -189,7 +235,14 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        await matchInvoices(upload.id);
+        // Fire-and-forget: do NOT await this. The HTTP response returns
+        // now; matching happens after, and the frontend polls for status.
+        processInvoicesInBackground(upload.id).catch((err) => {
+            console.error("Background invoice processing failed", err);
+            prisma.upload
+                .update({ where: { id: upload.id }, data: { status: "FAILED" } })
+                .catch(() => { });
+        });
 
         return NextResponse.json(
             { success: true, uploadId: upload.id, totalRows: parsedRows.length },
