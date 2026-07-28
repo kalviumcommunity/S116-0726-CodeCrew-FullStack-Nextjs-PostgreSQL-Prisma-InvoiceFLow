@@ -9,11 +9,27 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
+type UploadError = {
+    row: number;
+    message: string;
+};
+
+type UploadResponse = {
+    success: boolean;
+    uploadId?: string;
+    totalRows?: number;
+    savedRows?: number;
+    failedRows?: number;
+    errors?: UploadError[];
+    error?: string;
+};
+
 export default function UploadPage() {
     const router = useRouter();
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadMessage, setUploadMessage] = useState("");
+    const [uploadErrors, setUploadErrors] = useState<UploadError[]>([]);
     const [errorMessage, setErrorMessage] = useState("");
 
     const guidelines = useMemo(
@@ -46,6 +62,7 @@ export default function UploadPage() {
 
         setIsUploading(true);
         setUploadMessage("");
+        setUploadErrors([]);
         setErrorMessage("");
 
         try {
@@ -57,22 +74,41 @@ export default function UploadPage() {
                 body: formData,
             });
 
-            const data = await response.json();
+            const data = (await response.json()) as UploadResponse;
 
             if (!response.ok || !data.success) {
                 setErrorMessage(data.error ?? "Upload failed. Please try again.");
-                setIsUploading(false);
                 return;
             }
 
-            setUploadMessage(`Uploaded ${selectedFile.name}. Redirecting to results...`);
+            const totalRows = data.totalRows ?? 0;
+            let savedRows = data.savedRows;
+            let failedRows = data.failedRows;
 
-            // Send the user straight to the results page for this upload,
-            // where it will poll /api/uploads/:id for live progress.
-            router.push(`/invoices_results?uploadId=${data.uploadId}`);
+            if (data.uploadId && (savedRows === undefined || failedRows === undefined)) {
+                const statusResponse = await fetch(`/api/uploads/${data.uploadId}/status`);
+                if (statusResponse.ok) {
+                    const statusData = await statusResponse.json();
+                    savedRows = savedRows ?? statusData.successfulRows ?? 0;
+                    failedRows = failedRows ?? statusData.failedRows ?? 0;
+                }
+            }
+
+            setUploadMessage(
+                `Processed ${totalRows} row${totalRows === 1 ? "" : "s"}: ${savedRows ?? 0} saved, ${failedRows ?? 0} failed. Redirecting...`
+            );
+
+            if (data.errors && data.errors.length > 0) {
+                setUploadErrors(data.errors);
+            }
+
+            if (data.uploadId) {
+                router.push(`/uploads/${data.uploadId}`);
+            }
         } catch (err) {
             console.error("Upload request failed", err);
-            setErrorMessage("Something went wrong while uploading. Please try again.");
+            setErrorMessage(err instanceof Error ? err.message : "Something went wrong while uploading. Please try again.");
+        } finally {
             setIsUploading(false);
         }
     };
@@ -125,6 +161,7 @@ export default function UploadPage() {
                                     const file = event.target.files?.[0] ?? null;
                                     setSelectedFile(file);
                                     setUploadMessage("");
+                                    setUploadErrors([]);
                                     setErrorMessage("");
                                 }}
                             />
@@ -145,6 +182,16 @@ export default function UploadPage() {
                             {uploadMessage ? <p className="text-sm text-emerald-600">{uploadMessage}</p> : null}
                             {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
                         </div>
+
+                        {uploadErrors.length > 0 ? (
+                            <ul className="space-y-1 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                                {uploadErrors.map((entry) => (
+                                    <li key={`${entry.row}-${entry.message}`}>
+                                        Row {entry.row}: {entry.message}
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : null}
 
                         <div className="grid gap-4 md:grid-cols-3">
                             {guidelines.map((item) => {
