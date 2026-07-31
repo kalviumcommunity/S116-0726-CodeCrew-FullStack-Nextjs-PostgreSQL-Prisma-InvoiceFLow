@@ -112,7 +112,7 @@ export default function InvoicesResultsPage() {
             try {
                 const res = await fetch(`/api/uploads/${uploadId}/invoices`);
                 const data = await res.json();
-                if (!cancelled && res.ok && data.success) {
+                if (!cancelled && res.ok && data.invoices) {
                     setInvoices(data.invoices);
                 }
             } catch {
