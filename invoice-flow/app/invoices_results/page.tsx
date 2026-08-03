@@ -110,7 +110,7 @@ export default function InvoicesResultsPage() {
 
         async function fetchInvoices() {
             try {
-                const res = await fetch(`/api/uploads/${uploadId}/invoices`);
+                const res = await fetch(`/api/uploads/${uploadId}/invoices?pageSize=1000`);
                 const data = await res.json();
                 if (!cancelled && res.ok && data.success) {
                     setInvoices(data.invoices);
