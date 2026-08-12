@@ -3,8 +3,49 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Eye, Mail, Lock } from "lucide-react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { toast } from "sonner";
 
 export default function LoginForm() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const router = useRouter();
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (!result?.ok) {
+        setError("Invalid email or password");
+        toast.error("Invalid email or password");
+        return;
+      }
+
+      toast.success("Signed in successfully");
+      router.push("/dashboard");
+      router.refresh();
+    } catch (err) {
+      const errorMsg = "An error occurred. Please try again.";
+      setError(errorMsg);
+      toast.error(errorMsg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="mx-auto flex h-full w-full flex-col justify-center">
       {/* Heading */}
@@ -19,9 +60,16 @@ export default function LoginForm() {
         </p>
       </div>
 
+      {/* Error */}
+      {error && (
+        <div className="mb-4 rounded-lg bg-red-50 p-3 text-[13px] text-red-600">
+          {error}
+        </div>
+      )}
+
       {/* Form */}
 
-      <form className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-3">
         {/* Email */}
 
         <div>
@@ -38,7 +86,11 @@ export default function LoginForm() {
             <input
               type="email"
               placeholder="Enter your email"
-              className="ml-3 flex-1 bg-transparent text-[14px] placeholder:text-slate-400 outline-none"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
+              required
+              className="ml-3 flex-1 bg-transparent text-[14px] placeholder:text-slate-400 outline-none disabled:opacity-50"
             />
           </div>
         </div>
@@ -57,14 +109,20 @@ export default function LoginForm() {
             />
 
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
               placeholder="Enter your password"
-              className="ml-3 flex-1 bg-transparent text-[14px] placeholder:text-slate-400 outline-none"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
+              required
+              className="ml-3 flex-1 bg-transparent text-[14px] placeholder:text-slate-400 outline-none disabled:opacity-50"
             />
 
             <button
               type="button"
-              className="text-slate-400 transition hover:text-slate-700"
+              onClick={() => setShowPassword(!showPassword)}
+              disabled={isLoading}
+              className="text-slate-400 transition hover:text-slate-700 disabled:opacity-50"
             >
               <Eye size={17} />
             </button>
@@ -77,7 +135,8 @@ export default function LoginForm() {
           <label className="flex items-center gap-2 text-[13px] text-slate-600">
             <input
               type="checkbox"
-              className="h-4 w-4 rounded border-slate-300"
+              disabled={isLoading}
+              className="h-4 w-4 rounded border-slate-300 disabled:opacity-50"
             />
             Remember me
           </label>
@@ -92,39 +151,12 @@ export default function LoginForm() {
 
         {/* Sign In */}
 
-        <button className="h-11 w-full rounded-2xl bg-[#0F172A] text-[14px] font-medium text-white transition hover:bg-[#1E293B]">
-          Sign in
-        </button>
-
-        {/* Divider */}
-
-        <div className="relative py-1">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-200" />
-          </div>
-
-          <div className="relative flex justify-center">
-            <span className="bg-white px-3 text-[11px] uppercase tracking-[0.18em] text-slate-400">
-              Or continue with
-            </span>
-          </div>
-        </div>
-
-        {/* Google */}
-
         <button
-          type="button"
-          className="flex h-11 w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white text-[14px] font-medium text-slate-700 transition hover:bg-slate-50"
+          type="submit"
+          disabled={isLoading}
+          className="h-11 w-full rounded-2xl bg-[#0F172A] text-[14px] font-medium text-white transition hover:bg-[#1E293B] disabled:opacity-50"
         >
-          <Image
-            src="/images/google.png"
-            alt="Google"
-            width={20}
-            height={20}
-            className="h-5 w-5"
-          />
-
-          Sign in with Google
+          {isLoading ? "Signing in..." : "Sign in"}
         </button>
 
         {/* Bottom Signup */}

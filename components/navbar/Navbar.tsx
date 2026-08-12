@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { signOut } from "next-auth/react";
 
 import {
   LayoutDashboard,
@@ -386,10 +387,9 @@ export default function Navbar() {
                 outline-none
                 ring-offset-2
                 transition-shadow
-                ${
-                  profileOpen
-                    ? "ring-2 ring-slate-200"
-                    : ""
+                ${profileOpen
+                  ? "ring-2 ring-slate-200"
+                  : ""
                 }
               `}
             >
@@ -477,11 +477,9 @@ export default function Navbar() {
 
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       setProfileOpen(false);
-
-                      // Add your Supabase/Auth
-                      // sign-out logic here later.
+                      await signOut({ redirectTo: "/login" });
                     }}
                     className="
                       flex

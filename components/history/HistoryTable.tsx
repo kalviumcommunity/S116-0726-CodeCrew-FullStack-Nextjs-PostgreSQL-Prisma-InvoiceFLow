@@ -67,7 +67,7 @@ export default function HistoryTable({
   onPageChange,
 }: Props) {
   const [menuId, setMenuId] =
-    useState<number | null>(null);
+    useState<string | number | null>(null);
 
   const router = useRouter();
 
