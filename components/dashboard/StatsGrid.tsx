@@ -15,44 +15,23 @@ export default function StatsGrid() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const [upRes, invRes] = await Promise.all([
-          fetch("/api/uploads"),
-          fetch("/api/invoices"),
-        ]);
+        const res = await fetch("/api/dashboard/stats");
+        if (res.ok) {
+          const data = await res.json();
+          
+          const rate =
+            data.totalInvoices > 0
+              ? `${(((data.totalInvoices - data.failedRows) / data.totalInvoices) * 100).toFixed(1)}%`
+              : "100%";
 
-        let totalUploads = 0;
-        let runningJobs = 0;
-        if (upRes.ok) {
-          const data = await upRes.json();
-          totalUploads = data.total || 0;
-          runningJobs = (data.uploads || []).filter(
-            (u: any) => u.status === "Processing" || u.status === "Queued"
-          ).length;
+          setStatsData({
+            totalUploads: data.totalUploads,
+            totalInvoices: data.totalInvoices,
+            successRate: rate,
+            failedRows: data.failedRows,
+            runningJobs: data.runningJobs,
+          });
         }
-
-        let totalInvoices = 0;
-        let failedRows = 0;
-        let successCount = 0;
-        if (invRes.ok) {
-          const invData = await invRes.json();
-          const invList = invData.invoices || [];
-          totalInvoices = invList.length;
-          failedRows = invList.filter((i: any) => i.status === "Error").length;
-          successCount = invList.filter((i: any) => i.status === "Matched").length;
-        }
-
-        const rate =
-          totalInvoices > 0
-            ? `${(((totalInvoices - failedRows) / totalInvoices) * 100).toFixed(1)}%`
-            : "100%";
-
-        setStatsData({
-          totalUploads,
-          totalInvoices,
-          successRate: rate,
-          failedRows,
-          runningJobs,
-        });
       } catch (err) {
         console.error("StatsGrid fetch error:", err);
       }

@@ -134,6 +134,20 @@ export async function processUpload(
   }
 
   // -------------------------------------------------------------------------
+  // Verify that the CSV has the required column headers
+  // -------------------------------------------------------------------------
+  const headers = Object.keys(validRawRows[0]).map(k => k.toLowerCase().replace(/[^a-z0-9]/g, ""));
+  const invoiceCandidates = ["invoicenumber", "invoice", "id", "invoiceid", "invoiceno"];
+  const amountCandidates = ["totalamount", "amount", "total", "grandtotal"];
+
+  const hasInvoiceHeader = headers.some(h => invoiceCandidates.includes(h));
+  const hasAmountHeader = headers.some(h => amountCandidates.includes(h));
+
+  if (!hasInvoiceHeader && !hasAmountHeader) {
+    throw new Error("Invalid CSV format: Missing required invoice columns (e.g., Invoice Number, Amount). Please ensure you are uploading an invoice file.");
+  }
+
+  // -------------------------------------------------------------------------
   // 2. Create the Upload record (PROCESSING state)
   // -------------------------------------------------------------------------
   const upload = await prisma.upload.create({
@@ -273,14 +287,20 @@ export async function processUpload(
     let mismatchCount = 0;
 
     if (invoiceNumbers.length > 0) {
-      // Only compare against THIS user's existing invoices (not all tenants)
-      const existingInvoices = await prisma.invoice.findMany({
-        where: {
-          invoiceNumber: { in: invoiceNumbers },
-          status: { not: "FAILED" },
-          upload: { userId }, // <-- SECURITY: scoped to current user
-        },
-      });
+      const BATCH_SIZE = 5000;
+      const existingInvoices = [];
+      
+      for (let i = 0; i < invoiceNumbers.length; i += BATCH_SIZE) {
+        const batch = invoiceNumbers.slice(i, i + BATCH_SIZE);
+        const batchResults = await prisma.invoice.findMany({
+          where: {
+            invoiceNumber: { in: batch },
+            status: { not: "FAILED" },
+            upload: { userId }, // <-- SECURITY: scoped to current user
+          },
+        });
+        existingInvoices.push(...batchResults);
+      }
 
       const existingMap = new Map<string, typeof existingInvoices>();
       for (const ex of existingInvoices) {
@@ -328,8 +348,15 @@ export async function processUpload(
     const successfulRows = matchCount;
     const finalFailedRows = failedCount + mismatchCount;
 
-    await prisma.$transaction([
-      prisma.invoice.createMany({ data: invoiceRows }),
+    const BATCH_SIZE = 5000;
+    const transactionOperations = [];
+    
+    for (let i = 0; i < invoiceRows.length; i += BATCH_SIZE) {
+      const batch = invoiceRows.slice(i, i + BATCH_SIZE);
+      transactionOperations.push(prisma.invoice.createMany({ data: batch }));
+    }
+
+    transactionOperations.push(
       prisma.upload.update({
         where: { id: upload.id },
         data: {
@@ -337,8 +364,10 @@ export async function processUpload(
           successfulRows,
           failedRows: finalFailedRows,
         },
-      }),
-    ]);
+      })
+    );
+
+    await prisma.$transaction(transactionOperations);
 
     return {
       uploadId: upload.id,

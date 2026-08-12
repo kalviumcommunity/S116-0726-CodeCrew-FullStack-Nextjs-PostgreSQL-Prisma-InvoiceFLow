@@ -34,13 +34,28 @@ export default function InvoicesPage() {
   const [customTo, setCustomTo] = useState("");
   const [sort, setSort] = useState<SortFilter>("Newest First");
 
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [limit] = useState(50);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
   useEffect(() => {
     async function fetchInvoices() {
+      setLoading(true);
       try {
-        const res = await fetch("/api/invoices");
+        const queryParams = new URLSearchParams({
+          page: page.toString(),
+          limit: limit.toString(),
+          search: search.trim(),
+          status,
+          sort,
+        });
+
+        const res = await fetch(`/api/invoices?${queryParams.toString()}`);
         if (res.ok) {
           const data = await res.json();
           setInvoices(data.invoices || []);
+          setTotalPages(data.totalPages || 1);
         }
       } catch (err) {
         console.error("Error fetching invoices:", err);
@@ -50,59 +65,9 @@ export default function InvoicesPage() {
     }
 
     fetchInvoices();
-  }, []);
+  }, [page, limit, search, status, sort, refreshTrigger]);
 
-  const filteredInvoices = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    let result = invoices.filter((invoice) => {
-      const matchesSearch =
-        query === "" ||
-        (invoice.invoiceNumber && invoice.invoiceNumber.toLowerCase().includes(query)) ||
-        invoice.id.toLowerCase().includes(query) ||
-        invoice.vendor.toLowerCase().includes(query) ||
-        invoice.source.toLowerCase().includes(query);
-
-      const matchesStatus = status === "All" || invoice.status === status;
-
-      return matchesSearch && matchesStatus;
-    });
-
-    // Apply date range filter
-    if (dateRange !== "All Dates") {
-      const now = new Date();
-      let fromDate: Date | null = null;
-      let toDate: Date | null = null;
-
-      if (dateRange === "Last 7 Days") {
-        fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      } else if (dateRange === "Last 30 Days") {
-        fromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      } else if (dateRange === "Custom Range" && customFrom && customTo) {
-        fromDate = new Date(customFrom);
-        toDate = new Date(customTo);
-        toDate.setHours(23, 59, 59, 999);
-      }
-
-      if (fromDate) {
-        result = result.filter((inv) => {
-          // invoiceDate is an ISO string returned from the API
-          const invDate = new Date((inv as any).invoiceDate || inv.date);
-          if (toDate) return invDate >= fromDate! && invDate <= toDate;
-          return invDate >= fromDate!;
-        });
-      }
-    }
-
-    // Apply sort
-    result = [...result].sort((a, b) => {
-      const dateA = new Date((a as any).invoiceDate || a.date).getTime();
-      const dateB = new Date((b as any).invoiceDate || b.date).getTime();
-      return sort === "Oldest First" ? dateA - dateB : dateB - dateA;
-    });
-
-    return result;
-  }, [invoices, search, status, sort, dateRange, customFrom, customTo]);
+  const filteredInvoices = invoices;
 
   function handleCustomRange(from: string, to: string) {
     setCustomFrom(from);
@@ -111,7 +76,7 @@ export default function InvoicesPage() {
   }
 
   function handleDeleteInvoice(invoice: Invoice) {
-    setInvoices((current) => current.filter((item) => item.id !== invoice.id));
+    setRefreshTrigger((prev) => prev + 1);
   }
 
   function handleExport() {
@@ -169,9 +134,9 @@ export default function InvoicesPage() {
 
       <InvoiceToolbar
         search={search}
-        onSearchChange={setSearch}
+        onSearchChange={(val) => { setSearch(val); setPage(1); }}
         status={status}
-        onStatusChange={setStatus}
+        onStatusChange={(val) => { setStatus(val); setPage(1); }}
         dateRange={dateRange}
         onDateRangeChange={(value) => {
           setDateRange(value);
@@ -184,12 +149,15 @@ export default function InvoicesPage() {
         customTo={customTo}
         onCustomRange={handleCustomRange}
         sort={sort}
-        onSortChange={setSort}
+        onSortChange={(val) => { setSort(val); setPage(1); }}
         onExport={handleExport}
       />
 
       <InvoiceTable
         invoices={filteredInvoices}
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
         onDeleteInvoice={handleDeleteInvoice}
       />
     </div>

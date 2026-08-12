@@ -45,10 +45,39 @@ export async function GET(
       );
     }
 
-    const invoices = await prisma.invoice.findMany({
-      where: { uploadId },
-      orderBy: { createdAt: "asc" },
-    });
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "50", 10);
+    const search = searchParams.get("search") || "";
+    const status = searchParams.get("status") || "All";
+    
+    const skip = (page - 1) * limit;
+
+    const where: any = { uploadId };
+
+    if (search) {
+      where.OR = [
+        { invoiceNumber: { contains: search, mode: "insensitive" } },
+        { customerName: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    if (status !== "All") {
+      if (status === "Success") where.status = "MATCH";
+      if (status === "Failed") where.status = { in: ["FAILED", "MISMATCH"] };
+    }
+
+    const [invoices, total] = await Promise.all([
+      prisma.invoice.findMany({
+        where,
+        orderBy: { createdAt: "asc" },
+        skip,
+        take: limit,
+      }),
+      prisma.invoice.count({
+        where,
+      }),
+    ]);
 
     const mappedInvoices = invoices.map((inv: any) => {
       const numAmount = Number(inv.amount);
@@ -81,7 +110,9 @@ export async function GET(
 
     return NextResponse.json({
       invoices: mappedInvoices,
-      total: mappedInvoices.length,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
     });
   } catch (err: any) {
     console.error("GET /api/upload/[uploadId]/invoices error:", err);

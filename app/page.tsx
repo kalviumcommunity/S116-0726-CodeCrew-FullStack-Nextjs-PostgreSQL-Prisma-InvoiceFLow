@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 
 import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 
 /* =========================================================
    NAVIGATION
@@ -1705,7 +1706,7 @@ export default function LandingPage() {
                 "Secure account",
               ]}
               button="Get started free"
-              href="/signup"
+              href={status === "loading" ? "#" : (isAuthenticated ? "/dashboard" : "/signup")}
             />
 
             <PricingCard
@@ -1722,7 +1723,15 @@ export default function LandingPage() {
                 "Priority support",
               ]}
               button="Start with Pro"
-              href="/signup"
+              href={status === "loading" ? "#" : (isAuthenticated ? "#" : "/signup")}
+              onClick={
+                isAuthenticated
+                  ? (e) => {
+                      e.preventDefault();
+                      toast.info("Pro plan is not available yet");
+                    }
+                  : undefined
+              }
             />
           </div>
 
@@ -2348,6 +2357,7 @@ function PricingCard({
   features,
   button,
   href,
+  onClick,
   featured = false,
 }: {
   name: string;
@@ -2357,6 +2367,7 @@ function PricingCard({
   features: string[];
   button: string;
   href: string;
+  onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
   featured?: boolean;
 }) {
   return (
@@ -2394,6 +2405,7 @@ function PricingCard({
 
       <Link
         href={href}
+        onClick={onClick}
         className={`
           mt-7 flex h-11 w-full items-center justify-center gap-2 rounded-full
           text-[13px] font-semibold transition-all duration-300 active:scale-[0.98]

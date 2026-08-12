@@ -47,6 +47,9 @@ model Upload {
 
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([uploadDate])
 }
 
 model Invoice {
@@ -65,6 +68,8 @@ model Invoice {
 
   @@index([invoiceNumber])
   @@index([uploadId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model Company {

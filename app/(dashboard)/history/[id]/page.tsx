@@ -45,6 +45,7 @@ export default function UploadDetailsPage() {
     "All" | "Success" | "Failed"
   >("All");
   const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const rowsPerPage = 10;
 
@@ -58,9 +59,15 @@ export default function UploadDetailsPage() {
 
     async function fetchData() {
       try {
+        const queryParams = new URLSearchParams({
+          page: page.toString(),
+          limit: rowsPerPage.toString(),
+          search: search.trim(),
+          status: statusFilter,
+        });
         const [upRes, invRes] = await Promise.all([
           fetch(`/api/uploads/${uploadId}`),
-          fetch(`/api/uploads/${uploadId}/invoices`),
+          fetch(`/api/uploads/${uploadId}/invoices?${queryParams.toString()}`),
         ]);
 
         if (upRes.ok && isMounted) {
@@ -86,6 +93,7 @@ export default function UploadDetailsPage() {
             errorMessage: inv.errorMessage,
           }));
           setRows(mapped);
+          setTotalPages(invData.totalPages || 1);
         }
       } catch (err) {
         console.error("Error fetching upload details:", err);
@@ -107,7 +115,7 @@ export default function UploadDetailsPage() {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [uploadId]); // Only re-run when uploadId changes
+  }, [uploadId, page, search, statusFilter]); // Re-run when filters or page changes
 
   const uploadInfo = useMemo(() => {
     const up = uploadDetails?.upload || {};
@@ -134,30 +142,9 @@ export default function UploadDetailsPage() {
     };
   }, [uploadDetails, uploadId, rows]);
 
-  const filteredRows = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    return rows.filter((row) => {
-      const matchesSearch =
-        query.length === 0 ||
-        row.invoiceNumber.toLowerCase().includes(query) ||
-        row.customerName.toLowerCase().includes(query) ||
-        row.customerGSTIN.toLowerCase().includes(query) ||
-        row.productName.toLowerCase().includes(query);
-
-      const matchesStatus =
-        statusFilter === "All" || row.status === statusFilter;
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [search, statusFilter, rows]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
-  const safePage = Math.min(Math.max(page, 1), totalPages);
-  const visibleRows = filteredRows.slice(
-    (safePage - 1) * rowsPerPage,
-    safePage * rowsPerPage
-  );
+  const filteredRows = rows;
+  const safePage = page;
+  const visibleRows = rows;
 
   function handleSearch(value: string) {
     setSearch(value);
@@ -287,11 +274,18 @@ export default function UploadDetailsPage() {
             valueClassName="text-emerald-600"
           />
 
-          <SummaryCard
-            label="Failed"
-            value={uploadInfo.failedRows}
-            valueClassName="text-red-500"
-          />
+          <div
+            onClick={() => handleStatusChange("Failed")}
+            className="cursor-pointer transition hover:scale-[1.02] active:scale-95"
+            role="button"
+            title="View failed rows"
+          >
+            <SummaryCard
+              label="Failed"
+              value={uploadInfo.failedRows}
+              valueClassName="text-red-500"
+            />
+          </div>
 
           <SummaryCard
             label="Success Rate"
@@ -299,6 +293,33 @@ export default function UploadDetailsPage() {
             valueClassName="text-blue-600"
           />
         </section>
+
+        {uploadDetails && uploadInfo.failedRows === "0" && (
+          <div className="mt-5 rounded-[18px] border border-emerald-200 bg-emerald-50 px-5 py-4 flex items-center gap-3">
+            <CheckCircle2 size={24} className="text-emerald-600 shrink-0" />
+            <div>
+              <h2 className="text-sm font-semibold text-emerald-900">Upload Successful</h2>
+              <p className="text-xs text-emerald-700 mt-0.5">All rows were processed successfully without errors.</p>
+            </div>
+          </div>
+        )}
+
+        {uploadDetails && uploadInfo.failedRows !== "0" && uploadInfo.successfulRows !== "0" && (
+          <div className="mt-5 rounded-[18px] border border-amber-200 bg-amber-50 px-5 py-4 flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold text-amber-900">Partial Success</h2>
+              <p className="text-xs text-amber-800 mt-0.5">
+                {uploadInfo.successfulRows} rows processed successfully. {uploadInfo.failedRows} rows need attention.
+              </p>
+            </div>
+            <button
+              onClick={() => handleStatusChange("Failed")}
+              className="shrink-0 px-4 py-2 bg-amber-600 text-white text-xs font-semibold rounded-lg shadow-sm hover:bg-amber-700 active:scale-95 transition"
+            >
+              View failed rows
+            </button>
+          </div>
+        )}
 
         {/* FILE INFORMATION */}
         <section className="mt-5 rounded-[18px] border border-slate-200 bg-white shadow-[0_2px_8px_rgba(15,23,42,0.03)]">
@@ -408,11 +429,13 @@ export default function UploadDetailsPage() {
                         <Search size={22} className="text-slate-300" />
 
                         <p className="mt-3 text-sm font-medium text-slate-700">
-                          No rows found
+                          {statusFilter === "Failed" ? "✓ No failed rows" : "No rows found"}
                         </p>
 
                         <p className="mt-1 text-xs text-slate-400">
-                          Try changing your search or filter.
+                          {statusFilter === "Failed"
+                            ? "There are no errors matching your search."
+                            : "Try changing your search or filter."}
                         </p>
                       </div>
                     </td>
@@ -425,25 +448,32 @@ export default function UploadDetailsPage() {
                     return (
                       <tr
                         key={row.id || index}
-                        className="border-b border-slate-100 transition last:border-b-0 hover:bg-slate-50/50"
+                        className={`border-b transition last:border-b-0 ${
+                          failed
+                            ? "border-b-red-100 bg-red-50/40 hover:bg-red-50/60"
+                            : "border-b-slate-100 hover:bg-slate-50/50"
+                        }`}
                       >
                         <td className="px-4 py-3 text-[12px] font-medium text-slate-400">
-                          {rowNumber}
+                          {failed && (
+                            <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-red-500 rounded-r-sm" />
+                          )}
+                          <span className="relative">{rowNumber}</span>
                         </td>
 
-                        <td className="px-4 py-3 text-[13px] font-semibold text-slate-900">
+                        <td className={`px-4 py-3 text-[13px] font-semibold ${failed ? "text-red-900" : "text-slate-900"}`}>
                           {row.invoiceNumber}
                         </td>
 
-                        <td className="px-4 py-3 text-[12px] text-slate-600">
+                        <td className={`px-4 py-3 text-[12px] ${failed ? "text-red-700" : "text-slate-600"}`}>
                           {row.invoiceDate}
                         </td>
 
-                        <td className="px-4 py-3 text-[13px] text-slate-700">
+                        <td className={`px-4 py-3 text-[13px] ${failed ? "text-red-800" : "text-slate-700"}`}>
                           {row.customerName}
                         </td>
 
-                        <td className="px-4 py-3 text-right text-[13px] font-semibold text-slate-900">
+                        <td className={`px-4 py-3 text-right text-[13px] font-semibold ${failed ? "text-red-900" : "text-slate-900"}`}>
                           {row.totalAmount}
                         </td>
 
@@ -451,12 +481,12 @@ export default function UploadDetailsPage() {
                           <span
                             className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
                               failed
-                                ? "bg-red-50 text-red-700"
+                                ? "bg-red-100 text-red-700"
                                 : "bg-emerald-50 text-emerald-700"
                             }`}
                           >
                             {failed ? (
-                              <XCircle size={12} className="text-red-500" />
+                              <XCircle size={12} className="text-red-600" />
                             ) : (
                               <CheckCircle2 size={12} className="text-emerald-500" />
                             )}
@@ -464,8 +494,16 @@ export default function UploadDetailsPage() {
                           </span>
                         </td>
 
-                        <td className="px-4 py-3 text-[12px] text-red-500">
-                          {row.errorMessage || "--"}
+                        <td className="px-4 py-3">
+                          {row.errorMessage ? (
+                            <div className="flex flex-col">
+                              <span className="text-[12px] font-medium text-red-600 break-words max-w-[300px]">
+                                {row.errorMessage}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-300">--</span>
+                          )}
                         </td>
                       </tr>
                     );
@@ -474,6 +512,30 @@ export default function UploadDetailsPage() {
               </tbody>
             </table>
           </div>
+          {/* FOOTER PAGINATION */}
+          {totalPages > 1 && (
+            <div className="flex h-[60px] items-center justify-between border-t border-slate-200 px-6">
+              <p className="text-sm text-slate-500">
+                Page {safePage} of {totalPages}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  disabled={safePage <= 1}
+                  onClick={() => setPage(safePage - 1)}
+                  className="rounded border border-slate-200 px-3 py-1 text-sm disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <button
+                  disabled={safePage >= totalPages}
+                  onClick={() => setPage(safePage + 1)}
+                  className="rounded border border-slate-200 px-3 py-1 text-sm disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </section>
       </div>
     </div>

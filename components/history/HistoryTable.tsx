@@ -11,6 +11,16 @@ import {
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 import type {
   Upload,
@@ -69,6 +79,9 @@ export default function HistoryTable({
   const [menuId, setMenuId] =
     useState<string | number | null>(null);
 
+  const [deletingUpload, setDeletingUpload] = useState<Upload | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const router = useRouter();
 
   /* =======================================================
@@ -95,6 +108,27 @@ export default function HistoryTable({
     router.push(
       `/history/${upload.id}`
     );
+  }
+
+  async function handleConfirmDelete() {
+    if (!deletingUpload) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/uploads/${deletingUpload.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to delete upload");
+      }
+      toast.success("Upload deleted successfully.");
+      onDelete(deletingUpload);
+      setDeletingUpload(null);
+    } catch (error: any) {
+      toast.error(error.message || "An error occurred");
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   /* =======================================================
@@ -582,7 +616,7 @@ export default function HistoryTable({
                   type="button"
                   role="menuitem"
                   onClick={() => {
-                    onDelete(upload);
+                    setDeletingUpload(upload);
                     setMenuId(null);
                   }}
                   className="
@@ -782,6 +816,43 @@ export default function HistoryTable({
           </button>
         </div>
       </div>
+
+      <Dialog open={!!deletingUpload} onOpenChange={(open) => !open && !isDeleting && setDeletingUpload(null)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <div className="flex flex-col items-center text-center">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600">
+              <Trash2 size={24} strokeWidth={1.5} />
+            </div>
+            <DialogHeader>
+              <DialogTitle className="text-xl">Delete upload?</DialogTitle>
+              <DialogDescription className="mt-2 text-slate-500">
+                You&apos;re about to permanently delete this upload and its associated invoices. This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          {deletingUpload && (
+            <div className="mt-4 rounded-lg border border-slate-100 bg-slate-50 p-4">
+              <div className="flex items-center gap-2 font-medium text-slate-900">
+                <FileSpreadsheet size={16} className="text-slate-400" />
+                <span className="truncate">{deletingUpload.file}</span>
+              </div>
+              <div className="mt-1 text-sm text-slate-500">
+                {deletingUpload.rows} rows &middot; {deletingUpload.success} successful &middot; {deletingUpload.failed} failed
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="mt-6 flex gap-2 sm:justify-between">
+            <Button variant="outline" disabled={isDeleting} onClick={() => setDeletingUpload(null)} className="w-full sm:w-auto">
+              Cancel
+            </Button>
+            <Button variant="destructive" disabled={isDeleting} onClick={handleConfirmDelete} className="w-full bg-red-600 text-white hover:bg-red-700 sm:w-auto">
+              {isDeleting ? "Deleting..." : "Delete Permanently"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

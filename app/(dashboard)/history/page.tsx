@@ -40,16 +40,28 @@ export default function HistoryPage() {
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [page, setPage] = useState(1);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
 
   const ITEMS_PER_PAGE = 20;
 
   useEffect(() => {
     async function fetchUploads() {
+      setLoading(true);
       try {
-        const res = await fetch("/api/uploads");
+        const queryParams = new URLSearchParams({
+          page: page.toString(),
+          limit: ITEMS_PER_PAGE.toString(),
+        });
+        
+        const res = await fetch(`/api/uploads?${queryParams.toString()}`);
         if (res.ok) {
           const data = await res.json();
           setUploads(data.uploads || []);
+          setTotalPages(data.totalPages || 1);
+          setTotalRecords(data.total || 0);
         }
       } catch (err) {
         console.error("Error fetching uploads:", err);
@@ -59,66 +71,11 @@ export default function HistoryPage() {
     }
 
     fetchUploads();
-  }, []);
+  }, [page, refreshTrigger]);
 
-  const filteredUploads = useMemo(() => {
-    let result = [...uploads];
-    const query = search.trim().toLowerCase();
-
-    if (query) {
-      result = result.filter(
-        (u) =>
-          u.file.toLowerCase().includes(query) ||
-          u.uploaded.toLowerCase().includes(query) ||
-          u.status.toLowerCase().includes(query)
-      );
-    }
-
-    if (status !== "All Status") {
-      result = result.filter((u) => u.status === status);
-    }
-
-    // Apply date range filter
-    if (dateRange !== "All Dates") {
-      const now = new Date();
-      let fromDate: Date | null = null;
-      let toDate: Date | null = null;
-
-      if (dateRange === "Last 7 Days") {
-        fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      } else if (dateRange === "Last 30 Days") {
-        fromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      } else if (dateRange === "Custom Range" && customFrom && customTo) {
-        fromDate = new Date(customFrom);
-        toDate = new Date(customTo);
-        // Set toDate to end of that day
-        toDate.setHours(23, 59, 59, 999);
-      }
-
-      if (fromDate) {
-        result = result.filter((u) => {
-          const uploadDate = new Date(u.uploadedAt);
-          if (toDate) return uploadDate >= fromDate! && uploadDate <= toDate;
-          return uploadDate >= fromDate!;
-        });
-      }
-    }
-
-    result.sort((a, b) => {
-      const dateA = new Date(a.uploadedAt).getTime();
-      const dateB = new Date(b.uploadedAt).getTime();
-      return sort === "Oldest First" ? dateA - dateB : dateB - dateA;
-    });
-
-    return result;
-  }, [uploads, search, status, sort, dateRange, customFrom, customTo]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredUploads.length / ITEMS_PER_PAGE));
-  const safePage = Math.min(Math.max(page, 1), totalPages);
-  const visibleUploads = filteredUploads.slice(
-    (safePage - 1) * ITEMS_PER_PAGE,
-    safePage * ITEMS_PER_PAGE
-  );
+  const filteredUploads = uploads; // For simplicity, we are passing pagination to the server. If advanced filtering is needed, it should be done on the API. 
+  const visibleUploads = uploads;
+  const safePage = page;
 
   function handleView(upload: Upload) {
     router.push(`/history/${upload.id}`);
@@ -129,7 +86,7 @@ export default function HistoryPage() {
   }
 
   function handleDelete(upload: Upload) {
-    setUploads((current) => current.filter((item) => item.id !== upload.id));
+    setRefreshTrigger((prev) => prev + 1);
   }
 
   function handleRetry(upload: Upload) {
@@ -206,7 +163,7 @@ export default function HistoryPage() {
 
       <HistoryTable
         uploads={visibleUploads}
-        totalUploads={filteredUploads.length}
+        totalUploads={totalRecords}
         page={safePage}
         totalPages={totalPages}
         onView={handleView}

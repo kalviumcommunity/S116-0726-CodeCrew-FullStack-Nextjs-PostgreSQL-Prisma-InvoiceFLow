@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
@@ -63,6 +64,46 @@ export async function GET(
     console.error("GET /api/upload/[uploadId] error:", err);
     return NextResponse.json(
       { error: "Failed to fetch upload details" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ uploadId: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { uploadId } = await params;
+
+    const upload = await prisma.upload.findUnique({
+      where: { id: uploadId, userId: session.user.id },
+    });
+
+    if (!upload) {
+      return NextResponse.json(
+        { error: "Upload not found or unauthorized" },
+        { status: 404 }
+      );
+    }
+
+    // Hard delete - will cascade to invoices
+    await prisma.upload.delete({
+      where: { id: uploadId },
+    });
+
+    revalidatePath("/history");
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    console.error("DELETE /api/upload/[uploadId] error:", err);
+    return NextResponse.json(
+      { error: "Failed to delete upload" },
       { status: 500 }
     );
   }

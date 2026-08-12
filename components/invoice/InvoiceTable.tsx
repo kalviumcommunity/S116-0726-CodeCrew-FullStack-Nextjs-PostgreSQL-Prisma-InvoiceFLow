@@ -7,9 +7,19 @@ import {
   Download,
   Trash2,
 } from "lucide-react";
-
 import { useState } from "react";
+
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 import type { Invoice } from "@/app/(dashboard)/invoices/page";
 
@@ -19,7 +29,9 @@ import type { Invoice } from "@/app/(dashboard)/invoices/page";
 
 type Props = {
   invoices: Invoice[];
-
+  page?: number;
+  totalPages?: number;
+  onPageChange?: (page: number) => void;
   onDeleteInvoice: (
     invoice: Invoice
   ) => void;
@@ -49,12 +61,43 @@ const statusStyles: Record<
 
 export default function InvoiceTable({
   invoices,
+  page = 1,
+  totalPages = 1,
+  onPageChange,
   onDeleteInvoice,
 }: Props) {
   const router = useRouter();
 
   const [menuId, setMenuId] =
     useState<string | null>(null);
+
+  // Modal State
+  const [deletingInvoice, setDeletingInvoice] = useState<Invoice | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (!deletingInvoice) return;
+    setIsDeleting(true);
+    
+    try {
+      const res = await fetch(`/api/invoices/${deletingInvoice.dbId || deletingInvoice.id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to delete invoice.");
+      }
+
+      toast.success("Invoice deleted permanently.");
+      onDeleteInvoice(deletingInvoice);
+      setDeletingInvoice(null);
+    } catch (err: any) {
+      toast.error(err.message || "Unable to delete invoice. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   /* =======================================================
      OPEN INVOICE PAGE
@@ -510,9 +553,7 @@ export default function InvoiceTable({
                 <button
                   type="button"
                   onClick={() => {
-                    onDeleteInvoice(
-                      invoice
-                    );
+                    setDeletingInvoice(invoice);
                     setMenuId(null);
                   }}
                   className="
@@ -564,7 +605,72 @@ export default function InvoiceTable({
           </span>{" "}
           invoices
         </p>
+
+        {onPageChange && totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onPageChange(page - 1)}
+              disabled={page <= 1}
+              className="rounded px-3 py-1 text-sm border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-slate-600">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => onPageChange(page + 1)}
+              disabled={page >= totalPages}
+              className="rounded px-3 py-1 text-sm border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
+
+      <Dialog open={!!deletingInvoice} onOpenChange={(open) => !open && !isDeleting && setDeletingInvoice(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete invoice?</DialogTitle>
+            <DialogDescription>
+              This invoice will be permanently deleted and cannot be recovered.
+            </DialogDescription>
+          </DialogHeader>
+
+          {deletingInvoice && (
+            <div className="rounded-lg bg-slate-50 p-4 border border-slate-100 text-sm">
+              <div className="grid grid-cols-[100px_1fr] gap-2">
+                <span className="text-slate-500">Invoice:</span>
+                <span className="font-medium text-slate-900">{deletingInvoice.invoiceNumber || deletingInvoice.id}</span>
+                
+                <span className="text-slate-500">Customer:</span>
+                <span className="font-medium text-slate-900">{deletingInvoice.vendor}</span>
+
+                <span className="text-slate-500">Amount:</span>
+                <span className="font-medium text-slate-900">{deletingInvoice.amount}</span>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={isDeleting}
+              onClick={() => setDeletingInvoice(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isDeleting}
+              onClick={handleConfirmDelete}
+            >
+              {isDeleting ? "Deleting..." : "Delete Permanently"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
