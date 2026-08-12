@@ -1,152 +1,206 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { User, Mail, Lock, Eye } from "lucide-react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { toast } from "sonner";
 
 export default function SignupForm() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const router = useRouter();
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setErrors({});
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          confirmPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.details) {
+          setErrors(data.details);
+        } else {
+          setErrors({ general: data.error || "An error occurred" });
+          toast.error(data.error || "An error occurred");
+        }
+        return;
+      }
+
+      // Sign in after successful signup
+      const signInResult = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (!signInResult?.ok) {
+        toast.error("Account created but sign in failed. Please log in manually.");
+        router.push("/login");
+        return;
+      }
+
+      toast.success("Account created successfully");
+      router.push("/dashboard");
+      router.refresh();
+    } catch (err) {
+      const errorMsg = "An error occurred. Please try again.";
+      setErrors({ general: errorMsg });
+      toast.error(errorMsg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="mx-auto flex h-full w-full flex-col justify-center">
       {/* Heading */}
-
       <div className="mb-6 text-center">
         <h1 className="text-[36px] font-semibold tracking-tight text-slate-900">
           Create account
         </h1>
-
         <p className="mt-2 text-[15px] text-slate-500">
           Create your InvoiceFlow account.
         </p>
       </div>
 
+      {/* Errors */}
+      {errors.general && (
+        <div className="mb-4 rounded-lg bg-red-50 p-3 text-[13px] text-red-600">
+          {errors.general}
+        </div>
+      )}
+
       {/* Form */}
-
-      <form className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-3">
         {/* Full Name */}
-
         <div>
           <label className="mb-1.5 block text-[13px] font-medium text-slate-700">
             Full Name
           </label>
-
           <div className="flex h-10.5 items-center rounded-2xl border border-slate-200 px-4 transition focus-within:border-blue-600">
             <User size={17} className="text-slate-400" />
-
             <input
               type="text"
               placeholder="Enter your full name"
-              className="ml-3 flex-1 bg-transparent text-[14px] placeholder:text-slate-400 outline-none"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={isLoading}
+              required
+              className="ml-3 flex-1 bg-transparent text-[14px] placeholder:text-slate-400 outline-none disabled:opacity-50"
             />
           </div>
+          {errors.name && <p className="mt-1 text-[12px] text-red-600">{errors.name}</p>}
         </div>
 
         {/* Email */}
-
         <div>
           <label className="mb-1.5 block text-[13px] font-medium text-slate-700">
             Email
           </label>
-
           <div className="flex h-10.5 items-center rounded-2xl border border-slate-200 px-4 transition focus-within:border-blue-600">
             <Mail size={17} className="text-slate-400" />
-
             <input
               type="email"
               placeholder="Enter your email"
-              className="ml-3 flex-1 bg-transparent text-[14px] placeholder:text-slate-400 outline-none"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
+              required
+              className="ml-3 flex-1 bg-transparent text-[14px] placeholder:text-slate-400 outline-none disabled:opacity-50"
             />
           </div>
+          {errors.email && <p className="mt-1 text-[12px] text-red-600">{errors.email}</p>}
         </div>
 
         {/* Password */}
-
         <div>
           <label className="mb-1.5 block text-[13px] font-medium text-slate-700">
             Password
           </label>
-
           <div className="flex h-10.5 items-center rounded-2xl border border-slate-200 px-4 transition focus-within:border-blue-600">
             <Lock size={17} className="text-slate-400" />
-
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
               placeholder="Create a password"
-              className="ml-3 flex-1 bg-transparent text-[14px] placeholder:text-slate-400 outline-none"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
+              required
+              className="ml-3 flex-1 bg-transparent text-[14px] placeholder:text-slate-400 outline-none disabled:opacity-50"
             />
-
             <button
               type="button"
-              className="text-slate-400 transition hover:text-slate-700"
+              onClick={() => setShowPassword(!showPassword)}
+              disabled={isLoading}
+              className="text-slate-400 transition hover:text-slate-700 disabled:opacity-50"
             >
               <Eye size={17} />
             </button>
           </div>
+          {errors.password && <p className="mt-1 text-[12px] text-red-600">{errors.password}</p>}
         </div>
 
         {/* Confirm Password */}
-
         <div>
           <label className="mb-1.5 block text-[13px] font-medium text-slate-700">
             Confirm Password
           </label>
-
           <div className="flex h-10.5 items-center rounded-2xl border border-slate-200 px-4 transition focus-within:border-blue-600">
             <Lock size={17} className="text-slate-400" />
-
             <input
-              type="password"
+              type={showConfirmPassword ? "text" : "password"}
               placeholder="Confirm your password"
-              className="ml-3 flex-1 bg-transparent text-[14px] placeholder:text-slate-400 outline-none"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              disabled={isLoading}
+              required
+              className="ml-3 flex-1 bg-transparent text-[14px] placeholder:text-slate-400 outline-none disabled:opacity-50"
             />
-
             <button
               type="button"
-              className="text-slate-400 transition hover:text-slate-700"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              disabled={isLoading}
+              className="text-slate-400 transition hover:text-slate-700 disabled:opacity-50"
             >
               <Eye size={17} />
             </button>
           </div>
+          {errors.confirmPassword && (
+            <p className="mt-1 text-[12px] text-red-600">{errors.confirmPassword}</p>
+          )}
         </div>
 
         {/* Create Account */}
-
-        <button className="mt-1 h-11 w-full rounded-2xl bg-[#0F172A] text-[14px] font-medium text-white transition hover:bg-[#1E293B]">
-          Create Account
-        </button>
-
-        {/* Divider */}
-
-        <div className="relative py-1">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-200" />
-          </div>
-
-          <div className="relative flex justify-center">
-            <span className="bg-white px-3 text-[11px] uppercase tracking-[0.18em] text-slate-400">
-              Or continue with
-            </span>
-          </div>
-        </div>
-
-        {/* Google */}
-
         <button
-          type="button"
-          className="flex h-11 w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white text-[14px] font-medium text-slate-700 transition hover:bg-slate-50"
+          type="submit"
+          disabled={isLoading}
+          className="mt-1 h-11 w-full rounded-2xl bg-[#0F172A] text-[14px] font-medium text-white transition hover:bg-[#1E293B] disabled:opacity-50"
         >
-          <Image
-            src="/images/google.png"
-            alt="Google"
-            width={20}
-            height={20}
-            className="h-5 w-5"
-          />
-
-          Sign up with Google
+          {isLoading ? "Creating account..." : "Create Account"}
         </button>
 
         {/* Login Prompt */}
-
         <div className="pt-1 text-center">
           <p className="text-[13px] text-slate-500">
             Already have an account?{" "}
@@ -154,7 +208,7 @@ export default function SignupForm() {
               href="/login"
               className="font-semibold text-slate-900 transition hover:text-black"
             >
-              Login
+              Sign in
             </Link>
           </p>
         </div>

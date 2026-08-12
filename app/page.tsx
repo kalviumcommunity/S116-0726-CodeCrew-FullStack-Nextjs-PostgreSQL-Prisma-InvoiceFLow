@@ -466,16 +466,16 @@ export default function LandingPage() {
             invoices with speed, accuracy, and confidence.
           </motion.p>
 
-         {/* CTA */}
+          {/* CTA */}
 
-<motion.div
-  initial="hidden"
-  animate="visible"
-  variants={reveal}
-  transition={{
-    delay: reduceMotion ? 0 : 0.18,
-  }}
-  className="
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={reveal}
+            transition={{
+              delay: reduceMotion ? 0 : 0.18,
+            }}
+            className="
     mt-8
     flex
     flex-col
@@ -484,10 +484,10 @@ export default function LandingPage() {
     gap-3
     sm:flex-row
   "
->
-  <Link
-    href="/signup"
-    className="
+          >
+            <Link
+              href="/signup"
+              className="
       group
       flex
       h-12
@@ -508,20 +508,20 @@ export default function LandingPage() {
       hover:shadow-[0_14px_35px_rgba(15,23,42,0.20)]
       active:scale-[0.98]
     "
-  >
-    Get started for free
+            >
+              Get started for free
 
-    <ArrowRight
-      size={16}
-      strokeWidth={2}
-      className="
+              <ArrowRight
+                size={16}
+                strokeWidth={2}
+                className="
         transition-transform
         duration-300
         group-hover:translate-x-0.5
       "
-    />
-  </Link>
-</motion.div>
+              />
+            </Link>
+          </motion.div>
 
           {/* TRUST */}
 
@@ -626,11 +626,7 @@ export default function LandingPage() {
                 width={1544}
                 height={1019}
                 priority
-                sizes="
-                  (max-width: 640px) 94vw,
-                  (max-width: 1280px) 94vw,
-                  1280px
-                "
+                sizes="(max-width: 640px) 94vw, (max-width: 1280px) 94vw, 1280px"
                 className="
                   block
                   h-auto
@@ -2198,12 +2194,11 @@ function WorkflowNode({
           border
           bg-white
           shadow-[0_8px_20px_rgba(15,23,42,0.06)]
-          ${
-            success
-              ? "border-emerald-200 text-emerald-600"
-              : active
-                ? "border-blue-200 text-blue-600"
-                : "border-slate-200 text-slate-400"
+          ${success
+            ? "border-emerald-200 text-emerald-600"
+            : active
+              ? "border-blue-200 text-blue-600"
+              : "border-slate-200 text-slate-400"
           }
         `}
       >
@@ -2214,12 +2209,11 @@ function WorkflowNode({
         className={`
           text-[11px]
           font-medium
-          ${
-            success
-              ? "text-emerald-600"
-              : active
-                ? "text-slate-700"
-                : "text-slate-400"
+          ${success
+            ? "text-emerald-600"
+            : active
+              ? "text-slate-700"
+              : "text-slate-400"
           }
         `}
       >
@@ -2291,10 +2285,9 @@ function PricingCard({
       transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] as const }}
       className={`
         relative rounded-[26px] border p-7 sm:p-8
-        ${
-          featured
-            ? "border-blue-200 bg-white shadow-[0_22px_65px_rgba(37,99,235,0.12)]"
-            : "border-slate-200/80 bg-white/80 shadow-[0_12px_40px_rgba(15,23,42,0.05)]"
+        ${featured
+          ? "border-blue-200 bg-white shadow-[0_22px_65px_rgba(37,99,235,0.12)]"
+          : "border-slate-200/80 bg-white/80 shadow-[0_12px_40px_rgba(15,23,42,0.05)]"
         }
       `}
     >
@@ -2324,10 +2317,9 @@ function PricingCard({
         className={`
           mt-7 flex h-11 w-full items-center justify-center gap-2 rounded-full
           text-[13px] font-semibold transition-all duration-300 active:scale-[0.98]
-          ${
-            featured
-              ? "bg-[#0f172a] text-white hover:bg-[#1e293b]"
-              : "border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+          ${featured
+            ? "bg-[#0f172a] text-white hover:bg-[#1e293b]"
+            : "border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
           }
         `}
       >
@@ -2409,10 +2401,9 @@ function WorkflowStat({
         px-6
         py-7
         text-center
-        ${
-          border
-            ? "border-t border-slate-100 sm:border-l sm:border-t-0"
-            : ""
+        ${border
+          ? "border-t border-slate-100 sm:border-l sm:border-t-0"
+          : ""
         }
       `}
     >
