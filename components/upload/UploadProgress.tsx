@@ -39,8 +39,11 @@ export default function UploadProgress({
     if (!uploadId) return;
 
     let isMounted = true;
+    // Track completion in a ref so the interval callback always sees the latest value
+    let completed = false;
 
     async function pollStatus() {
+      if (completed) return;
       try {
         const res = await fetch(`/api/uploads/${uploadId}`);
         if (!res.ok) return;
@@ -51,7 +54,8 @@ export default function UploadProgress({
         setUploadData(data);
         setProgress(data.progressPercent ?? 0);
 
-        if (data.upload?.status === "COMPLETED" || data.progressPercent === 100) {
+        if (data.upload?.status === "COMPLETED" || data.upload?.status === "FAILED" || data.progressPercent === 100) {
+          completed = true;
           if (onComplete) {
             onComplete(data);
           }
@@ -62,10 +66,7 @@ export default function UploadProgress({
     }
 
     pollStatus();
-
-    const interval = setInterval(() => {
-      pollStatus();
-    }, 1500);
+    const interval = setInterval(pollStatus, 1500);
 
     return () => {
       isMounted = false;

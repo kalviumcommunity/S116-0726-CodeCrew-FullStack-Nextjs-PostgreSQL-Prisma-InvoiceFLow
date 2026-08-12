@@ -22,62 +22,61 @@ function formatCurrency(val: number): string {
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const session = await auth();
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const invoices = await prisma.invoice.findMany({
+    const { id } = await params;
+
+    // Find invoice and verify ownership via the upload relation
+    const inv = await prisma.invoice.findFirst({
       where: {
-        upload: {
-          userId: session.user.id,
-        },
+        id,
+        upload: { userId: session.user.id },
       },
-      include: {
-        upload: true,
-      },
-      orderBy: { createdAt: "desc" },
+      include: { upload: true },
     });
 
-    const mappedInvoices = invoices.map((inv: any) => {
-      const numAmount = Number(inv.amount);
-      const formattedAmount = formatCurrency(numAmount);
-      const formattedDate = formatDateString(inv.invoiceDate);
+    if (!inv) {
+      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+    }
 
-      let uiStatus: "Matched" | "Pending" | "Error" = "Pending";
-      if (inv.status === "MATCH") uiStatus = "Matched";
-      else if (inv.status === "MISMATCH" || inv.status === "FAILED") uiStatus = "Error";
-      else if (inv.status === "PROCESSING") uiStatus = "Pending";
+    const numAmount = Number(inv.amount);
 
-      return {
+    let uiStatus: "Matched" | "Pending" | "Error" = "Pending";
+    if (inv.status === "MATCH") uiStatus = "Matched";
+    else if (inv.status === "MISMATCH" || inv.status === "FAILED") uiStatus = "Error";
+
+    return NextResponse.json({
+      invoice: {
         id: inv.id,
         dbId: inv.id,
         invoiceNumber: inv.invoiceNumber,
         vendor: inv.customerName,
         customerName: inv.customerName,
         gstin: "N/A",
-        date: formattedDate,
+        date: formatDateString(inv.invoiceDate),
         invoiceDate: inv.invoiceDate.toISOString(),
-        amount: formattedAmount,
+        amount: formatCurrency(numAmount),
         rawAmount: numAmount,
         gst: "₹0",
         status: uiStatus,
         dbStatus: inv.status,
         errorMessage: inv.errorMessage,
         source: inv.upload?.fileName || "upload.csv",
-      };
-    });
-
-    return NextResponse.json({
-      invoices: mappedInvoices,
-      total: mappedInvoices.length,
+        uploadId: inv.uploadId,
+      },
     });
   } catch (err: any) {
-    console.error("GET /api/invoices error:", err);
+    console.error("GET /api/invoices/[id] error:", err);
     return NextResponse.json(
-      { error: "Failed to fetch invoices" },
+      { error: "Failed to fetch invoice" },
       { status: 500 }
     );
   }

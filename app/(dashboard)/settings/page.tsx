@@ -41,7 +41,7 @@ export default function SettingsPage() {
           {/* RIGHT CONTENT */}
           <section className="min-h-0 overflow-hidden rounded-[18px] border border-slate-200/80 bg-white shadow-[0_5px_20px_rgba(15,23,42,0.035)]">
 
-            <div className="h-full overflow-y-auto">
+            <div className="h-full overflow-hidden">
               <SettingsContent
                 setting={selectedSetting}
               />

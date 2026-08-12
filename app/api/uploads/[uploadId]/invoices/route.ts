@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 
 function formatDateString(d: Date): string {
   try {
@@ -26,10 +27,15 @@ export async function GET(
   { params }: { params: Promise<{ uploadId: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { uploadId } = await params;
 
     const upload = await prisma.upload.findUnique({
-      where: { id: uploadId },
+      where: { id: uploadId, userId: session.user.id },
     });
 
     if (!upload) {
@@ -55,7 +61,7 @@ export async function GET(
       else if (inv.status === "PROCESSING") uiStatus = "Pending";
 
       return {
-        id: inv.invoiceNumber || inv.id,
+        id: inv.id,
         dbId: inv.id,
         invoiceNumber: inv.invoiceNumber,
         vendor: inv.customerName,
@@ -78,7 +84,7 @@ export async function GET(
       total: mappedInvoices.length,
     });
   } catch (err: any) {
-    console.error("GET /api/uploads/[uploadId]/invoices error:", err);
+    console.error("GET /api/upload/[uploadId]/invoices error:", err);
     return NextResponse.json(
       { error: "Failed to fetch upload invoices" },
       { status: 500 }

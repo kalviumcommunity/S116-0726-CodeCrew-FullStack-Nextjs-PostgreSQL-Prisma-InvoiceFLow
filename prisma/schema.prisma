@@ -26,8 +26,11 @@ model User {
   name      String
   email     String     @unique
   password  String
+  image     String?
+  company   Company?
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
+  uploads   Upload[]
 }
 
 model Upload {
@@ -39,6 +42,8 @@ model Upload {
   successfulRows Int          @default(0)
   failedRows     Int          @default(0)
   invoices       Invoice[]
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
@@ -60,4 +65,20 @@ model Invoice {
 
   @@index([invoiceNumber])
   @@index([uploadId])
+}
+
+model Company {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName   String
+  gstin         String?
+  pan           String?
+  contactEmail  String?
+  contactNumber String?
+  website       String?
+  address       String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }

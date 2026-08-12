@@ -78,6 +78,32 @@ export default function HistoryPage() {
       result = result.filter((u) => u.status === status);
     }
 
+    // Apply date range filter
+    if (dateRange !== "All Dates") {
+      const now = new Date();
+      let fromDate: Date | null = null;
+      let toDate: Date | null = null;
+
+      if (dateRange === "Last 7 Days") {
+        fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      } else if (dateRange === "Last 30 Days") {
+        fromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      } else if (dateRange === "Custom Range" && customFrom && customTo) {
+        fromDate = new Date(customFrom);
+        toDate = new Date(customTo);
+        // Set toDate to end of that day
+        toDate.setHours(23, 59, 59, 999);
+      }
+
+      if (fromDate) {
+        result = result.filter((u) => {
+          const uploadDate = new Date(u.uploadedAt);
+          if (toDate) return uploadDate >= fromDate! && uploadDate <= toDate;
+          return uploadDate >= fromDate!;
+        });
+      }
+    }
+
     result.sort((a, b) => {
       const dateA = new Date(a.uploadedAt).getTime();
       const dateB = new Date(b.uploadedAt).getTime();
@@ -85,7 +111,7 @@ export default function HistoryPage() {
     });
 
     return result;
-  }, [uploads, search, status, sort]);
+  }, [uploads, search, status, sort, dateRange, customFrom, customTo]);
 
   const totalPages = Math.max(1, Math.ceil(filteredUploads.length / ITEMS_PER_PAGE));
   const safePage = Math.min(Math.max(page, 1), totalPages);

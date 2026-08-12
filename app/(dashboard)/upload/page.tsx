@@ -8,12 +8,24 @@ import FormatGuide from "@/components/upload/FormatGuide";
 
 type UploadStatus = "idle" | "uploading" | "success";
 
+interface UploadResult {
+  uploadId: string;
+  totalRows: number;
+  successfulRows: number;
+  failedRows: number;
+  matchCount: number;
+  mismatchCount: number;
+  failedCount: number;
+  fileName: string;
+}
+
 export default function UploadPage() {
   const [status, setStatus] = useState<UploadStatus>("idle");
   const [showFormatGuide, setShowFormatGuide] = useState(false);
   const [uploadId, setUploadId] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+  const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
 
   async function handleFileSelected(file: File) {
     try {
@@ -36,6 +48,17 @@ export default function UploadPage() {
       }
 
       setUploadId(data.uploadId);
+      // Store result for success screen — will be populated when polling completes
+      setUploadResult({
+        uploadId: data.uploadId,
+        totalRows: data.totalRows ?? 0,
+        successfulRows: data.successfulRows ?? 0,
+        failedRows: data.failedRows ?? 0,
+        matchCount: data.matchCount ?? 0,
+        mismatchCount: data.mismatchCount ?? 0,
+        failedCount: data.failedCount ?? 0,
+        fileName: file.name,
+      });
     } catch (err: any) {
       console.error("CSV Upload failed:", err);
       setError(err.message || "Upload failed");
@@ -43,8 +66,22 @@ export default function UploadPage() {
     }
   }
 
-  function handleComplete() {
-    // Optional transition to success state if desired
+  function handleComplete(details: any) {
+    // Transition to success screen once UploadProgress reports COMPLETED
+    const counts = details?.counts;
+    const upload = details?.upload;
+    if (uploadResult) {
+      setUploadResult((prev) => prev && {
+        ...prev,
+        totalRows: upload?.totalRows ?? prev.totalRows,
+        successfulRows: upload?.successfulRows ?? prev.successfulRows,
+        failedRows: upload?.failedRows ?? prev.failedRows,
+        matchCount: counts?.match ?? prev.matchCount,
+        mismatchCount: counts?.mismatch ?? prev.mismatchCount,
+        failedCount: counts?.failed ?? prev.failedCount,
+      });
+    }
+    setStatus("success");
   }
 
   return (
@@ -83,7 +120,17 @@ export default function UploadPage() {
           />
         )}
 
-        {status === "success" && <UploadSuccess />}
+        {status === "success" && (
+          <UploadSuccess
+            result={uploadResult}
+            onUploadAnother={() => {
+              setStatus("idle");
+              setUploadId(null);
+              setUploadResult(null);
+              setFileName("");
+            }}
+          />
+        )}
       </div>
 
       {/* FORMAT GUIDE */}

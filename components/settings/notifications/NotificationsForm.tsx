@@ -32,7 +32,7 @@ export default function NotificationsForm() {
 
 
       {/* CONTENT */}
-      <div className="min-h-0 flex-1 px-7 py-5">
+      <div className="min-h-0 flex-1 overflow-y-auto px-7 py-5 pb-12">
 
         {/* ITEMS */}
         <div className="space-y-3">

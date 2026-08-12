@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 
 function formatDate(d: Date): string {
   try {
@@ -17,7 +18,13 @@ function formatDate(d: Date): string {
 
 export async function GET(req: NextRequest) {
   try {
+    const session = await auth();
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const uploads = await prisma.upload.findMany({
+      where: { userId: session.user.id },
       orderBy: { uploadDate: "desc" },
     });
 
@@ -50,7 +57,7 @@ export async function GET(req: NextRequest) {
       total: mappedUploads.length,
     });
   } catch (err: any) {
-    console.error("GET /api/uploads error:", err);
+    console.error("GET /api/upload error:", err);
     return NextResponse.json(
       { error: "Failed to fetch uploads" },
       { status: 500 }

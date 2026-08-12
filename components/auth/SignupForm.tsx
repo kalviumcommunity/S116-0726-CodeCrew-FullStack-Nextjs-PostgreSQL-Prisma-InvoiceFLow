@@ -38,11 +38,18 @@ export default function SignupForm() {
       const data = await response.json();
 
       if (!response.ok) {
+        if (response.status === 409) {
+          const msg = data.error || "This email is already registered. Please sign in instead.";
+          setErrors({ email: msg, general: msg });
+          toast.error(msg);
+          return;
+        }
+
         if (data.details) {
           setErrors(data.details);
         } else {
-          setErrors({ general: data.error || "An error occurred" });
-          toast.error(data.error || "An error occurred");
+          setErrors({ general: data.error || "An error occurred during signup" });
+          toast.error(data.error || "An error occurred during signup");
         }
         return;
       }
@@ -86,8 +93,18 @@ export default function SignupForm() {
 
       {/* Errors */}
       {errors.general && (
-        <div className="mb-4 rounded-lg bg-red-50 p-3 text-[13px] text-red-600">
-          {errors.general}
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3.5 text-[13px] text-red-700">
+          <p>{errors.general}</p>
+          {errors.general.includes("registered") && (
+            <div className="mt-2">
+              <Link
+                href="/login"
+                className="font-semibold text-blue-600 underline hover:text-blue-800"
+              >
+                Sign in to your account →
+              </Link>
+            </div>
+          )}
         </div>
       )}
 

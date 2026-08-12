@@ -12,6 +12,8 @@ export type SortFilter = "Newest First" | "Oldest First";
 
 export interface Invoice {
   id: string;
+  dbId?: string;
+  invoiceNumber?: string;
   vendor: string;
   gstin: string;
   date: string;
@@ -53,9 +55,10 @@ export default function InvoicesPage() {
   const filteredInvoices = useMemo(() => {
     const query = search.trim().toLowerCase();
 
-    const result = invoices.filter((invoice) => {
+    let result = invoices.filter((invoice) => {
       const matchesSearch =
         query === "" ||
+        (invoice.invoiceNumber && invoice.invoiceNumber.toLowerCase().includes(query)) ||
         invoice.id.toLowerCase().includes(query) ||
         invoice.vendor.toLowerCase().includes(query) ||
         invoice.source.toLowerCase().includes(query);
@@ -65,8 +68,41 @@ export default function InvoicesPage() {
       return matchesSearch && matchesStatus;
     });
 
+    // Apply date range filter
+    if (dateRange !== "All Dates") {
+      const now = new Date();
+      let fromDate: Date | null = null;
+      let toDate: Date | null = null;
+
+      if (dateRange === "Last 7 Days") {
+        fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      } else if (dateRange === "Last 30 Days") {
+        fromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      } else if (dateRange === "Custom Range" && customFrom && customTo) {
+        fromDate = new Date(customFrom);
+        toDate = new Date(customTo);
+        toDate.setHours(23, 59, 59, 999);
+      }
+
+      if (fromDate) {
+        result = result.filter((inv) => {
+          // invoiceDate is an ISO string returned from the API
+          const invDate = new Date((inv as any).invoiceDate || inv.date);
+          if (toDate) return invDate >= fromDate! && invDate <= toDate;
+          return invDate >= fromDate!;
+        });
+      }
+    }
+
+    // Apply sort
+    result = [...result].sort((a, b) => {
+      const dateA = new Date((a as any).invoiceDate || a.date).getTime();
+      const dateB = new Date((b as any).invoiceDate || b.date).getTime();
+      return sort === "Oldest First" ? dateA - dateB : dateB - dateA;
+    });
+
     return result;
-  }, [invoices, search, status]);
+  }, [invoices, search, status, sort, dateRange, customFrom, customTo]);
 
   function handleCustomRange(from: string, to: string) {
     setCustomFrom(from);
@@ -93,7 +129,7 @@ export default function InvoicesPage() {
     ];
 
     const rows = filteredInvoices.map((inv) => [
-      inv.id,
+      inv.invoiceNumber || inv.id,
       inv.vendor,
       inv.gstin,
       inv.date,

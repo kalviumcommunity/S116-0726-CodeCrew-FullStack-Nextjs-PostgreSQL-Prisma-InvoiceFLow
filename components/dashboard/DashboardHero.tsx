@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Search, SlidersHorizontal, Check } from "lucide-react";
+import { useSession } from "next-auth/react";
 
 type DateFilter =
   | "All time"
@@ -11,6 +12,10 @@ type DateFilter =
   | "Custom range";
 
 export default function DashboardHero() {
+  const { data: session } = useSession();
+  const rawName = session?.user?.name || "User";
+  const firstName = rawName.trim().split(" ")[0];
+
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] =
     useState<DateFilter>("All time");
@@ -80,7 +85,7 @@ export default function DashboardHero() {
 
       <div>
         <h1 className="text-[20px] font-semibold tracking-[-0.03em] text-slate-900">
-          Good morning, Khushal 👋
+          Good morning, {firstName} 👋
         </h1>
 
         <p className="mt-1 text-[13px] text-slate-500">

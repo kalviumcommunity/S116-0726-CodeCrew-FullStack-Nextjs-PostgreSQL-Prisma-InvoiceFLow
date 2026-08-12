@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 interface CSVRow {
+  id?: string;
   invoiceNumber: string;
   invoiceDate: string;
   customerName: string;
@@ -52,6 +53,8 @@ export default function UploadDetailsPage() {
     if (!uploadId) return;
 
     let isMounted = true;
+    // Use a ref-like variable so the interval always sees the latest status
+    let latestStatus: string | null = null;
 
     async function fetchData() {
       try {
@@ -62,12 +65,14 @@ export default function UploadDetailsPage() {
 
         if (upRes.ok && isMounted) {
           const upData = await upRes.json();
+          latestStatus = upData?.upload?.status ?? null;
           setUploadDetails(upData);
         }
 
         if (invRes.ok && isMounted) {
           const invData = await invRes.json();
           const mapped: CSVRow[] = (invData.invoices || []).map((inv: any) => ({
+            id: inv.dbId || inv.id,
             invoiceNumber: inv.invoiceNumber || inv.id,
             invoiceDate: inv.date,
             customerName: inv.customerName || inv.vendor,
@@ -91,13 +96,9 @@ export default function UploadDetailsPage() {
 
     fetchData();
 
-    // Poll if processing
+    // Poll only while processing — uses latestStatus ref to avoid stale closure
     const interval = setInterval(() => {
-      if (
-        uploadDetails &&
-        uploadDetails.upload &&
-        uploadDetails.upload.status === "PROCESSING"
-      ) {
+      if (latestStatus === "PROCESSING" || latestStatus === null) {
         fetchData();
       }
     }, 1500);
@@ -106,7 +107,7 @@ export default function UploadDetailsPage() {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [uploadId, uploadDetails?.upload?.status]);
+  }, [uploadId]); // Only re-run when uploadId changes
 
   const uploadInfo = useMemo(() => {
     const up = uploadDetails?.upload || {};
@@ -423,7 +424,7 @@ export default function UploadDetailsPage() {
 
                     return (
                       <tr
-                        key={index}
+                        key={row.id || index}
                         className="border-b border-slate-100 transition last:border-b-0 hover:bg-slate-50/50"
                       >
                         <td className="px-4 py-3 text-[12px] font-medium text-slate-400">

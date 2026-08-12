@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 
 import {
   LayoutDashboard,
@@ -42,6 +42,17 @@ const navItems = [
 
 export default function Navbar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+
+  const userName = session?.user?.name || "User";
+  const userImage = session?.user?.image;
+
+  const initials = (() => {
+    if (!userName) return "U";
+    const parts = userName.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  })();
 
   const [profileOpen, setProfileOpen] =
     useState(false);
@@ -107,7 +118,7 @@ export default function Navbar() {
 
         <div className="flex flex-1 items-center">
           <Link
-            href="/dashboard"
+            href="/"
             className="flex items-center gap-3"
           >
             <motion.div
@@ -393,7 +404,16 @@ export default function Navbar() {
                 }
               `}
             >
-              KR
+              {userImage ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={userImage}
+                  alt={userName}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                initials
+              )}
             </motion.button>
 
             {/* =================================================

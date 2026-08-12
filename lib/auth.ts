@@ -44,6 +44,7 @@ const authConfig = {
                     id: user.id,
                     email: user.email,
                     name: user.name,
+                    image: user.image,
                 };
             },
         }),
@@ -53,15 +54,26 @@ const authConfig = {
         error: "/login",
     },
     callbacks: {
-        async jwt({ token, user }: any) {
+        async jwt({ token, user, trigger, session }: any) {
             if (user) {
                 token.id = user.id;
+                token.name = user.name;
+                token.email = user.email;
+                token.picture = user.image;
+            }
+            if (trigger === "update" && session) {
+                if (session.name) token.name = session.name;
+                if (session.email) token.email = session.email;
+                if (session.image !== undefined) token.picture = session.image;
             }
             return token;
         },
         async session({ session, token }: any) {
             if (session.user) {
                 session.user.id = token.id as string;
+                session.user.name = token.name as string;
+                session.user.email = token.email as string;
+                session.user.image = token.picture as string;
             }
             return session;
         },
@@ -69,7 +81,8 @@ const authConfig = {
     session: {
         strategy: "jwt",
     },
-    secret: process.env.NEXTAUTH_SECRET,
+    secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+    trustHost: true,
 } satisfies NextAuthConfig;
 
-export const { auth, signIn, signOut } = NextAuth(authConfig);
+export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);

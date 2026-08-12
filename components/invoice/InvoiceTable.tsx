@@ -279,9 +279,9 @@ export default function InvoiceTable({
                   transition
                   group-hover:text-blue-600
                 "
-                title={invoice.id}
+                title={invoice.invoiceNumber || invoice.id}
               >
-                {invoice.id}
+                {invoice.invoiceNumber || invoice.id}
               </p>
             </div>
           </div>
@@ -589,7 +589,7 @@ function downloadInvoice(
   ];
 
   const row = [
-    invoice.id,
+    invoice.invoiceNumber || invoice.id,
     invoice.vendor,
     invoice.gstin,
     invoice.date,

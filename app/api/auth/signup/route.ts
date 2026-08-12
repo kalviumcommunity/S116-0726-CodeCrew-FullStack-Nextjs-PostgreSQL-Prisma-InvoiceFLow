@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
         if (existingUser) {
             return NextResponse.json(
-                { error: "Email already in use" },
+                { error: "This email is already registered. Please sign in instead." },
                 { status: 409 }
             );
         }

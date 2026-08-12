@@ -27,6 +27,8 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 
+import { useSession } from "next-auth/react";
+
 /* =========================================================
    NAVIGATION
 ========================================================= */
@@ -56,6 +58,8 @@ const navItems = [
 
 export default function LandingPage() {
   const reduceMotion = useReducedMotion();
+  const { data: session, status } = useSession();
+  const isAuthenticated = status === "authenticated" && !!session?.user;
 
   /* =======================================================
      SMOOTH SCROLL
@@ -230,61 +234,101 @@ export default function LandingPage() {
             ================================================= */}
 
             <div className="ml-auto flex items-center gap-1">
-              <Link
-                href="/login"
-                className="
-                  hidden
-                  rounded-full
-                  px-4
-                  py-2.5
-                  text-[13px]
-                  font-medium
-                  text-slate-700
-                  transition-colors
-                  duration-300
-                  hover:text-slate-950
-                  sm:block
-                "
-              >
-                Sign in
-              </Link>
-
-              <Link
-                href="/signup"
-                className="
-                  group
-                  flex
-                  h-10
-                  items-center
-                  gap-2
-                  rounded-full
-                  bg-[#0f172a]
-                  px-5
-                  text-[13px]
-                  font-semibold
-                  text-white
-                  shadow-[0_5px_18px_rgba(15,23,42,0.14)]
-                  transition-all
-                  duration-300
-                  ease-out
-                  hover:bg-[#1e293b]
-                  hover:shadow-[0_8px_24px_rgba(15,23,42,0.20)]
-                  active:scale-[0.97]
-                "
-              >
-                Get started
-
-                <ArrowRight
-                  size={15}
-                  strokeWidth={2}
+              {isAuthenticated ? (
+                <Link
+                  href="/dashboard"
                   className="
-                    transition-transform
+                    group
+                    flex
+                    h-10
+                    items-center
+                    gap-2
+                    rounded-full
+                    bg-[#0f172a]
+                    px-5
+                    text-[13px]
+                    font-semibold
+                    text-white
+                    shadow-[0_5px_18px_rgba(15,23,42,0.14)]
+                    transition-all
                     duration-300
                     ease-out
-                    group-hover:translate-x-0.5
+                    hover:bg-[#1e293b]
+                    hover:shadow-[0_8px_24px_rgba(15,23,42,0.20)]
+                    active:scale-[0.97]
                   "
-                />
-              </Link>
+                >
+                  Dashboard
+                  <ArrowRight
+                    size={15}
+                    strokeWidth={2}
+                    className="
+                      transition-transform
+                      duration-300
+                      ease-out
+                      group-hover:translate-x-0.5
+                    "
+                  />
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="
+                      hidden
+                      rounded-full
+                      px-4
+                      py-2.5
+                      text-[13px]
+                      font-medium
+                      text-slate-700
+                      transition-colors
+                      duration-300
+                      hover:text-slate-950
+                      sm:block
+                    "
+                  >
+                    Sign in
+                  </Link>
+
+                  <Link
+                    href="/signup"
+                    className="
+                      group
+                      flex
+                      h-10
+                      items-center
+                      gap-2
+                      rounded-full
+                      bg-[#0f172a]
+                      px-5
+                      text-[13px]
+                      font-semibold
+                      text-white
+                      shadow-[0_5px_18px_rgba(15,23,42,0.14)]
+                      transition-all
+                      duration-300
+                      ease-out
+                      hover:bg-[#1e293b]
+                      hover:shadow-[0_8px_24px_rgba(15,23,42,0.20)]
+                      active:scale-[0.97]
+                    "
+                  >
+                    Get started
+
+                    <ArrowRight
+                      size={15}
+                      strokeWidth={2}
+                      className="
+                        transition-transform
+                        duration-300
+                        ease-out
+                        group-hover:translate-x-0.5
+                      "
+                    />
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -567,7 +611,7 @@ export default function LandingPage() {
           {/* DASHBOARD */}
 
           <motion.div
-            id="product"
+            id="dashboard"
             initial={{
               opacity: 0,
               y: reduceMotion ? 0 : 35,
@@ -588,7 +632,7 @@ export default function LandingPage() {
               mx-auto
               mt-14
               max-w-[1280px]
-              scroll-mt-32
+              scroll-mt-28
             "
           >
             <div
@@ -826,6 +870,8 @@ export default function LandingPage() {
               title="CSV Upload"
               description="Upload large CSV files in seconds. Our system handles thousands of invoices with ease."
               delay={0}
+              targetId="upload"
+              onNavigate={scrollTo}
             />
 
             <FeatureCard
@@ -834,6 +880,8 @@ export default function LandingPage() {
               title="Smart Validation"
               description="Automatically detect errors, missing fields, GST mismatches, and invalid data."
               delay={0.06}
+              targetId="validation"
+              onNavigate={scrollTo}
             />
 
             <FeatureCard
@@ -842,6 +890,8 @@ export default function LandingPage() {
               title="Fast Processing"
               description="Process thousands of invoices in minutes with a powerful and reliable processing engine."
               delay={0.12}
+              targetId="processing"
+              onNavigate={scrollTo}
             />
 
             <FeatureCard
@@ -850,6 +900,8 @@ export default function LandingPage() {
               title="Dashboard Overview"
               description="Get real-time insights into total invoices, success rate, errors, and processing activity."
               delay={0.18}
+              targetId="dashboard"
+              onNavigate={scrollTo}
             />
 
             <FeatureCard
@@ -858,6 +910,8 @@ export default function LandingPage() {
               title="Invoice Management"
               description="View, search, filter, and manage all your invoices from one clean workspace."
               delay={0.24}
+              targetId="invoices"
+              onNavigate={scrollTo}
             />
 
             <FeatureCard
@@ -866,12 +920,15 @@ export default function LandingPage() {
               title="Secure & Reliable"
               description="Built with secure infrastructure, protected data, and reliability you can trust."
               delay={0.30}
+              targetId="security"
+              onNavigate={scrollTo}
             />
           </div>
 
           {/* BOTTOM CTA */}
 
           <motion.div
+            id="security"
             initial={{
               opacity: 0,
               y: reduceMotion ? 0 : 18,
@@ -892,6 +949,7 @@ export default function LandingPage() {
             className="
               mt-6
               flex
+              scroll-mt-28
               flex-col
               gap-6
               rounded-[24px]
@@ -1199,6 +1257,7 @@ export default function LandingPage() {
               "
             >
               <HowItWorksStep
+                id="upload"
                 number="01"
                 title="Upload"
                 description="Drop your CSV file into InvoiceFlow and start processing instantly."
@@ -1208,6 +1267,7 @@ export default function LandingPage() {
               />
 
               <HowItWorksStep
+                id="validation"
                 number="02"
                 title="Validate"
                 description="InvoiceFlow checks every row for missing data, errors, and invalid information."
@@ -1217,6 +1277,7 @@ export default function LandingPage() {
               />
 
               <HowItWorksStep
+                id="processing"
                 number="03"
                 title="Process"
                 description="Thousands of valid invoices are processed automatically through one workflow."
@@ -1226,6 +1287,7 @@ export default function LandingPage() {
               />
 
               <HowItWorksStep
+                id="invoices"
                 number="04"
                 title="Review"
                 description="See results, errors, success rates, and processing activity from your dashboard."
@@ -1904,12 +1966,16 @@ function FeatureCard({
   title,
   description,
   delay,
+  targetId,
+  onNavigate,
 }: {
   icon: ReactNode;
   iconClass: string;
   title: string;
   description: string;
   delay: number;
+  targetId: string;
+  onNavigate: (id: string) => void;
 }) {
   const reduceMotion = useReducedMotion();
 
@@ -2019,15 +2085,23 @@ function FeatureCard({
           {description}
         </p>
 
-        <div
+        <a
+          href={`#${targetId}`}
+          onClick={(e) => {
+            e.preventDefault();
+            onNavigate(targetId);
+          }}
           className="
             mt-4
-            flex
+            inline-flex
             items-center
             gap-2
             text-[13px]
             font-medium
             text-blue-600
+            hover:text-blue-700
+            focus:outline-none
+            focus:underline
           "
         >
           Learn more
@@ -2040,7 +2114,7 @@ function FeatureCard({
               group-hover:translate-x-1
             "
           />
-        </div>
+        </a>
       </div>
     </motion.div>
   );
@@ -2051,6 +2125,7 @@ function FeatureCard({
 ========================================================= */
 
 function HowItWorksStep({
+  id,
   number,
   title,
   description,
@@ -2058,6 +2133,7 @@ function HowItWorksStep({
   iconClass,
   delay,
 }: {
+  id?: string;
   number: string;
   title: string;
   description: string;
@@ -2069,6 +2145,7 @@ function HowItWorksStep({
 
   return (
     <motion.div
+      id={id}
       initial={{
         opacity: 0,
         y: reduceMotion ? 0 : 20,
@@ -2089,6 +2166,7 @@ function HowItWorksStep({
       className="
         group
         relative
+        scroll-mt-28
         rounded-[22px]
         border
         border-slate-200/80
@@ -2098,7 +2176,9 @@ function HowItWorksStep({
         backdrop-blur-xl
         transition-all
         duration-500
+        ease-[cubic-bezier(0.22,1,0.36,1)]
         hover:-translate-y-1
+        hover:border-slate-200
         hover:shadow-[0_18px_45px_rgba(15,23,42,0.08)]
       "
     >

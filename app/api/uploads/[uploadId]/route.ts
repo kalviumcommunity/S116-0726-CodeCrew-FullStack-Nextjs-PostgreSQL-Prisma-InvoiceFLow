@@ -1,15 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ uploadId: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { uploadId } = await params;
 
     const upload = await prisma.upload.findUnique({
-      where: { id: uploadId },
+      where: { id: uploadId, userId: session.user.id },
     });
 
     if (!upload) {
@@ -54,7 +60,7 @@ export async function GET(
       },
     });
   } catch (err: any) {
-    console.error("GET /api/uploads/[uploadId] error:", err);
+    console.error("GET /api/upload/[uploadId] error:", err);
     return NextResponse.json(
       { error: "Failed to fetch upload details" },
       { status: 500 }
