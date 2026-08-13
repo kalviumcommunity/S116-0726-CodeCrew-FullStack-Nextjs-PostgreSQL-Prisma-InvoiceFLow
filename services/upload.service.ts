@@ -88,14 +88,25 @@ function getRawValue(raw: Record<string, string>, candidateKeys: string[]): stri
   return "";
 }
 
+export interface ChunkMeta {
+  uploadId?: string;
+  isFirstChunk?: boolean;
+  isLastChunk?: boolean;
+  totalRows?: number;
+}
+
 // ---------------------------------------------------------------------------
 // Main entry point — called from /api/upload route handler
 // ---------------------------------------------------------------------------
 export async function processUpload(
   buffer: Buffer,
   fileName: string,
-  userId: string
+  userId: string,
+  chunkMeta?: ChunkMeta
 ) {
+  const isFirstChunk = chunkMeta?.isFirstChunk ?? true;
+  const isLastChunk = chunkMeta?.isLastChunk ?? true;
+
   if (!buffer || buffer.length === 0) {
     throw new Error("Uploaded CSV file is empty (0 bytes)");
   }
@@ -148,18 +159,33 @@ export async function processUpload(
   }
 
   // -------------------------------------------------------------------------
-  // 2. Create the Upload record (PROCESSING state)
+  // 2. Create or Retrieve the Upload record
   // -------------------------------------------------------------------------
-  const upload = await prisma.upload.create({
-    data: {
-      fileName,
-      status: "PROCESSING",
-      totalRows: validRawRows.length,
-      successfulRows: 0,
-      failedRows: 0,
-      userId,
-    },
-  });
+  let upload: { id: string; totalRows: number; successfulRows: number; failedRows: number };
+
+  if (isFirstChunk) {
+    upload = await prisma.upload.create({
+      data: {
+        fileName,
+        status: "PROCESSING",
+        totalRows: chunkMeta?.totalRows ?? validRawRows.length,
+        successfulRows: 0,
+        failedRows: 0,
+        userId,
+      },
+    });
+  } else {
+    if (!chunkMeta?.uploadId) {
+      throw new Error("Missing uploadId for subsequent chunk");
+    }
+    const existing = await prisma.upload.findUnique({
+      where: { id: chunkMeta.uploadId },
+    });
+    if (!existing || existing.userId !== userId) {
+      throw new Error("Upload record not found or unauthorized");
+    }
+    upload = existing;
+  }
 
   try {
     // -----------------------------------------------------------------------
@@ -315,6 +341,7 @@ export async function processUpload(
 
         if (existing && existing.length > 0) {
           // Check if any existing invoice conflicts on vendor, amount, or date
+          let conflictMessage = "";
           const hasConflict = existing.some((other) => {
             const sameVendor =
               other.customerName.trim().toLowerCase() ===
@@ -324,10 +351,23 @@ export async function processUpload(
             const sameDate =
               other.invoiceDate.toISOString().split("T")[0] ===
               inv.invoiceDate.toISOString().split("T")[0];
-            return !sameVendor || !sameAmount || !sameDate;
+            
+            if (!sameVendor || !sameAmount || !sameDate) {
+              const reasons = [];
+              if (!sameAmount) reasons.push("amount");
+              if (!sameVendor) reasons.push("customer");
+              if (!sameDate) reasons.push("invoice date");
+              
+              conflictMessage = `${reasons.join(", ")} differs from existing invoice`;
+              return true;
+            }
+            return false;
           });
 
           inv.status = hasConflict ? "MISMATCH" : "MATCH";
+          if (hasConflict) {
+            inv.errorMessage = conflictMessage.charAt(0).toUpperCase() + conflictMessage.slice(1);
+          }
         } else {
           // No prior invoice with this number → new entry, counts as MATCH
           inv.status = "MATCH";
@@ -356,28 +396,46 @@ export async function processUpload(
       transactionOperations.push(prisma.invoice.createMany({ data: batch }));
     }
 
-    transactionOperations.push(
-      prisma.upload.update({
-        where: { id: upload.id },
-        data: {
-          status: "COMPLETED",
-          successfulRows,
-          failedRows: finalFailedRows,
-        },
-      })
-    );
+    if (isFirstChunk) {
+      transactionOperations.push(
+        prisma.upload.update({
+          where: { id: upload.id },
+          data: {
+            status: isLastChunk ? "COMPLETED" : "PROCESSING",
+            successfulRows,
+            failedRows: finalFailedRows,
+          },
+        })
+      );
+    } else {
+      transactionOperations.push(
+        prisma.upload.update({
+          where: { id: upload.id },
+          data: {
+            status: isLastChunk ? "COMPLETED" : "PROCESSING",
+            successfulRows: { increment: successfulRows },
+            failedRows: { increment: finalFailedRows },
+          },
+        })
+      );
+    }
 
     await prisma.$transaction(transactionOperations);
 
+    // Fetch latest cumulative totals for response summary
+    const updatedUpload = await prisma.upload.findUnique({
+      where: { id: upload.id },
+    });
+
     return {
       uploadId: upload.id,
-      totalRows: validRawRows.length,
-      successfulRows,
-      failedRows: finalFailedRows,
+      totalRows: updatedUpload?.totalRows ?? upload.totalRows,
+      successfulRows: updatedUpload?.successfulRows ?? successfulRows,
+      failedRows: updatedUpload?.failedRows ?? finalFailedRows,
       matchCount,
       mismatchCount,
       failedCount,
-      status: "COMPLETED",
+      status: isLastChunk ? "COMPLETED" : "PROCESSING",
     };
   } catch (processingError) {
     // -----------------------------------------------------------------------

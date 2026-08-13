@@ -1,5 +1,3 @@
-import { ArrowUpRight } from "lucide-react";
-
 interface StatCardProps {
   title: string;
   value: string;
@@ -16,17 +14,10 @@ export default function StatCard({
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center">
         <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
           {title}
         </p>
-
-        <div className="rounded-lg bg-slate-50 p-1.5">
-          <ArrowUpRight
-            size={15}
-            className="text-slate-400"
-          />
-        </div>
       </div>
 
       {/* Value */}

@@ -63,8 +63,7 @@ export async function GET(
     }
 
     if (status !== "All") {
-      if (status === "Success") where.status = "MATCH";
-      if (status === "Failed") where.status = { in: ["FAILED", "MISMATCH"] };
+      where.status = status;
     }
 
     const [invoices, total] = await Promise.all([
@@ -84,10 +83,7 @@ export async function GET(
       const formattedAmount = formatCurrency(numAmount);
       const formattedDate = formatDateString(inv.invoiceDate);
 
-      let uiStatus: "Matched" | "Pending" | "Error" = "Pending";
-      if (inv.status === "MATCH") uiStatus = "Matched";
-      else if (inv.status === "MISMATCH" || inv.status === "FAILED") uiStatus = "Error";
-      else if (inv.status === "PROCESSING") uiStatus = "Pending";
+      const uiStatus = inv.status || "PROCESSING";
 
       return {
         id: inv.id,

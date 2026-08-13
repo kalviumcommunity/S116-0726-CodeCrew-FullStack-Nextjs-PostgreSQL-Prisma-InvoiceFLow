@@ -46,7 +46,11 @@ export default function SignupForm() {
         }
 
         if (data.details) {
-          setErrors(data.details);
+          const formattedErrors: Record<string, string> = {};
+          for (const key in data.details) {
+            formattedErrors[key] = data.details[key][0];
+          }
+          setErrors(formattedErrors);
         } else {
           setErrors({ general: data.error || "An error occurred during signup" });
           toast.error(data.error || "An error occurred during signup");

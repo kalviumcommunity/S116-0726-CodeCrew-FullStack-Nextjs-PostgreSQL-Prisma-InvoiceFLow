@@ -50,9 +50,7 @@ export async function GET(
 
     const numAmount = Number(inv.amount);
 
-    let uiStatus: "Matched" | "Pending" | "Error" = "Pending";
-    if (inv.status === "MATCH") uiStatus = "Matched";
-    else if (inv.status === "MISMATCH" || inv.status === "FAILED") uiStatus = "Error";
+    const uiStatus = inv.status || "PROCESSING";
 
     return NextResponse.json({
       invoice: {

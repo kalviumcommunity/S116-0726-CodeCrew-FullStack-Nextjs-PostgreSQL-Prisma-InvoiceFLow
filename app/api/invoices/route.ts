@@ -54,9 +54,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (status !== "All") {
-      if (status === "Matched") where.status = "MATCH";
-      if (status === "Pending") where.status = { in: ["PENDING", "PROCESSING"] };
-      if (status === "Error") where.status = { in: ["FAILED", "MISMATCH"] };
+      where.status = status;
     }
 
     const orderBy: any = {};
@@ -83,10 +81,7 @@ export async function GET(req: NextRequest) {
       const formattedAmount = formatCurrency(numAmount);
       const formattedDate = formatDateString(inv.invoiceDate);
 
-      let uiStatus: "Matched" | "Pending" | "Error" = "Pending";
-      if (inv.status === "MATCH") uiStatus = "Matched";
-      else if (inv.status === "MISMATCH" || inv.status === "FAILED") uiStatus = "Error";
-      else if (inv.status === "PROCESSING") uiStatus = "Pending";
+      const uiStatus = inv.status || "PROCESSING";
 
       return {
         id: inv.id,

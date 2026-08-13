@@ -1,6 +1,16 @@
-import { auth } from "@/lib/auth";
+/**
+ * middleware.ts — Next.js Edge Middleware for route protection.
+ *
+ * Imports ONLY the lightweight auth.config.ts (no Prisma, no bcrypt, no Node APIs).
+ * Session verification is done via JWT cookie — no database queries needed here.
+ * All user-data authorization (ownership checks) is enforced in individual API routes.
+ */
+import NextAuth from "next-auth";
+import { authConfig } from "@/lib/auth.config";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+
+const { auth } = NextAuth(authConfig);
 
 // Routes that are publicly accessible without a session
 const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/"];
@@ -17,7 +27,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check session
+  // Check session via lightweight JWT-only auth (no DB query)
   const session = await auth();
 
   if (!session) {

@@ -27,7 +27,7 @@ interface CSVRow {
   unitPrice: string;
   taxAmount: string;
   totalAmount: string;
-  status: "Success" | "Failed";
+  status: "PROCESSING" | "MATCH" | "MISMATCH" | "FAILED";
   errorMessage?: string | null;
 }
 
@@ -42,7 +42,7 @@ export default function UploadDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<
-    "All" | "Success" | "Failed"
+    "All" | "PROCESSING" | "MATCH" | "MISMATCH" | "FAILED"
   >("All");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -89,7 +89,7 @@ export default function UploadDetailsPage() {
             unitPrice: inv.amount,
             taxAmount: inv.gst || "₹0",
             totalAmount: inv.amount,
-            status: inv.dbStatus === "FAILED" ? "Failed" : "Success",
+            status: inv.dbStatus || "PROCESSING",
             errorMessage: inv.errorMessage,
           }));
           setRows(mapped);
@@ -151,7 +151,7 @@ export default function UploadDetailsPage() {
     setPage(1);
   }
 
-  function handleStatusChange(value: "All" | "Success" | "Failed") {
+  function handleStatusChange(value: "All" | "PROCESSING" | "MATCH" | "MISMATCH" | "FAILED") {
     setStatusFilter(value);
     setPage(1);
   }
@@ -275,7 +275,7 @@ export default function UploadDetailsPage() {
           />
 
           <div
-            onClick={() => handleStatusChange("Failed")}
+            onClick={() => handleStatusChange("FAILED")}
             className="cursor-pointer transition hover:scale-[1.02] active:scale-95"
             role="button"
             title="View failed rows"
@@ -313,7 +313,7 @@ export default function UploadDetailsPage() {
               </p>
             </div>
             <button
-              onClick={() => handleStatusChange("Failed")}
+              onClick={() => handleStatusChange("FAILED")}
               className="shrink-0 px-4 py-2 bg-amber-600 text-white text-xs font-semibold rounded-lg shadow-sm hover:bg-amber-700 active:scale-95 transition"
             >
               View failed rows
@@ -388,14 +388,16 @@ export default function UploadDetailsPage() {
                   value={statusFilter}
                   onChange={(event) =>
                     handleStatusChange(
-                      event.target.value as "All" | "Success" | "Failed"
+                      event.target.value as "All" | "PROCESSING" | "MATCH" | "MISMATCH" | "FAILED"
                     )
                   }
                   className="h-9 appearance-none rounded-full border border-slate-200 bg-white pl-3 pr-9 text-[12px] font-medium text-slate-600 outline-none transition hover:bg-slate-50 focus:border-blue-300"
                 >
                   <option value="All">All Rows</option>
-                  <option value="Success">Successful</option>
-                  <option value="Failed">Failed</option>
+                  <option value="PROCESSING">Processing</option>
+                  <option value="MATCH">Match</option>
+                  <option value="MISMATCH">Mismatch</option>
+                  <option value="FAILED">Failed</option>
                 </select>
 
                 <SlidersHorizontal
@@ -429,11 +431,11 @@ export default function UploadDetailsPage() {
                         <Search size={22} className="text-slate-300" />
 
                         <p className="mt-3 text-sm font-medium text-slate-700">
-                          {statusFilter === "Failed" ? "✓ No failed rows" : "No rows found"}
+                          {statusFilter === "FAILED" ? "✓ No failed rows" : "No rows found"}
                         </p>
 
                         <p className="mt-1 text-xs text-slate-400">
-                          {statusFilter === "Failed"
+                          {statusFilter === "FAILED"
                             ? "There are no errors matching your search."
                             : "Try changing your search or filter."}
                         </p>
@@ -443,7 +445,7 @@ export default function UploadDetailsPage() {
                 ) : (
                   visibleRows.map((row, index) => {
                     const rowNumber = (safePage - 1) * rowsPerPage + index + 1;
-                    const failed = row.status === "Failed";
+                    const failed = row.status === "FAILED";
 
                     return (
                       <tr
@@ -480,14 +482,19 @@ export default function UploadDetailsPage() {
                         <td className="px-4 py-3 text-center">
                           <span
                             className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                              failed
+                              row.status === "FAILED"
                                 ? "bg-red-100 text-red-700"
-                                : "bg-emerald-50 text-emerald-700"
+                                : row.status === "MISMATCH"
+                                ? "bg-amber-100 text-amber-700"
+                                : row.status === "MATCH"
+                                ? "bg-emerald-50 text-emerald-700"
+                                : "bg-blue-50 text-blue-700"
                             }`}
                           >
-                            {failed ? (
+                            {row.status === "FAILED" && (
                               <XCircle size={12} className="text-red-600" />
-                            ) : (
+                            )}
+                            {row.status === "MATCH" && (
                               <CheckCircle2 size={12} className="text-emerald-500" />
                             )}
                             {row.status}

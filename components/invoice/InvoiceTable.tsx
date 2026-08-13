@@ -45,13 +45,16 @@ const statusStyles: Record<
   Invoice["status"],
   string
 > = {
-  Matched:
+  PROCESSING:
+    "bg-blue-50 text-blue-700",
+
+  MATCH:
     "bg-emerald-50 text-emerald-700",
 
-  Pending:
+  MISMATCH:
     "bg-amber-50 text-amber-700",
 
-  Error:
+  FAILED:
     "bg-red-50 text-red-700",
 };
 

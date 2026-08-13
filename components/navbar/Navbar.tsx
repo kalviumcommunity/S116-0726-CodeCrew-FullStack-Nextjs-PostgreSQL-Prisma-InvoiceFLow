@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { signOut, useSession } from "next-auth/react";
@@ -54,6 +54,7 @@ export default function Navbar() {
     return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
   })();
 
+  const router = useRouter();
   const [profileOpen, setProfileOpen] =
     useState(false);
 
@@ -499,7 +500,9 @@ export default function Navbar() {
                     type="button"
                     onClick={async () => {
                       setProfileOpen(false);
-                      await signOut({ redirectTo: "/login" });
+                      await signOut({ redirect: false });
+                      router.push("/login");
+                      router.refresh();
                     }}
                     className="
                       flex

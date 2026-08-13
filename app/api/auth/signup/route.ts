@@ -5,7 +5,11 @@ import { z } from "zod";
 
 const signupSchema = z.object({
     name: z.string().min(1, "Name is required"),
-    email: z.string().email("Invalid email address"),
+    email: z.string()
+        .trim()
+        .toLowerCase()
+        .email("Please enter a valid email address.")
+        .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Please enter a valid email address."),
     password: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -29,7 +33,9 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { name, email, password } = validatedData.data;
+        const name = validatedData.data.name;
+        const email = validatedData.data.email;
+        const password = validatedData.data.password;
 
         // Check if user already exists
         const existingUser = await prisma.user.findUnique({

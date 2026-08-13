@@ -23,9 +23,10 @@ import {
 
 export type StatusFilter =
   | "All"
-  | "Matched"
-  | "Pending"
-  | "Error";
+  | "PROCESSING"
+  | "MATCH"
+  | "MISMATCH"
+  | "FAILED";
 
 export type DateFilter =
   | "All Dates"
@@ -253,39 +254,52 @@ export default function InvoiceToolbar({
           />
 
           <MenuItem
-            label="Matched"
+            label="PROCESSING"
             selected={
-              status === "Matched"
+              status === "PROCESSING"
             }
             onClick={() => {
               onStatusChange(
-                "Matched"
+                "PROCESSING"
               );
               setOpenMenu(null);
             }}
           />
 
           <MenuItem
-            label="Pending"
+            label="MATCH"
             selected={
-              status === "Pending"
+              status === "MATCH"
             }
             onClick={() => {
               onStatusChange(
-                "Pending"
+                "MATCH"
               );
               setOpenMenu(null);
             }}
           />
 
           <MenuItem
-            label="Error"
+            label="MISMATCH"
             selected={
-              status === "Error"
+              status === "MISMATCH"
             }
             onClick={() => {
               onStatusChange(
-                "Error"
+                "MISMATCH"
+              );
+              setOpenMenu(null);
+            }}
+          />
+
+          <MenuItem
+            label="FAILED"
+            selected={
+              status === "FAILED"
+            }
+            onClick={() => {
+              onStatusChange(
+                "FAILED"
               );
               setOpenMenu(null);
             }}

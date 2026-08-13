@@ -28,12 +28,17 @@ export default function LoginForm() {
         redirect: false,
       });
 
-      if (!result?.ok) {
-        setError("Invalid email or password");
-        toast.error("Invalid email or password");
+      // NextAuth v5 beta: HTTP status is 200 even on auth failure.
+      // The real failure signal is result.error containing "CredentialsSignin".
+      // The real failure signal is result.error containing "CredentialsSignin" or result.ok being false.
+      if (result?.error || result?.ok === false) {
+        const msg = "Invalid email or password. Please try again.";
+        setError(msg);
+        toast.error(msg);
         return;
       }
 
+      // Only reach here if authentication genuinely succeeded
       toast.success("Signed in successfully");
       router.push("/dashboard");
       router.refresh();

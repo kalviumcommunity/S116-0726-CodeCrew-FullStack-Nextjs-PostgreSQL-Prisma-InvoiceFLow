@@ -207,7 +207,7 @@ export default function UploadProgress({
                 />
 
                 <span className="text-[13px] font-medium text-slate-600">
-                  {counts.match} Matched
+                  {counts.match} MATCH
                 </span>
               </div>
 
@@ -221,7 +221,7 @@ export default function UploadProgress({
                 />
 
                 <span className="text-[13px] font-medium text-slate-600">
-                  {counts.failed + counts.mismatch} Mismatch / Errors
+                  {counts.failed + counts.mismatch} MISMATCH / FAILED
                 </span>
               </div>
             </div>

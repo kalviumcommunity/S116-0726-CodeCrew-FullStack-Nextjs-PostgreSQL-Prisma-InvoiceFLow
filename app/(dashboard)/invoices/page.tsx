@@ -5,8 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import InvoiceToolbar from "@/components/invoice/InvoiceToolbar";
 import InvoiceTable from "@/components/invoice/InvoiceTable";
 
-export type InvoiceStatus = "Matched" | "Pending" | "Error";
-export type StatusFilter = "All" | "Matched" | "Pending" | "Error";
+export type InvoiceStatus = "PROCESSING" | "MATCH" | "MISMATCH" | "FAILED";
+export type StatusFilter = "All" | "PROCESSING" | "MATCH" | "MISMATCH" | "FAILED";
 export type DateFilter = "All Dates" | "Last 7 Days" | "Last 30 Days" | "Custom Range";
 export type SortFilter = "Newest First" | "Oldest First";
 

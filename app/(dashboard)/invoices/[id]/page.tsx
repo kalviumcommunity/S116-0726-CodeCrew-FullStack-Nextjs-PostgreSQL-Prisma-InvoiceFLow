@@ -18,7 +18,7 @@ import { useEffect, useState, type ReactNode } from "react";
    TYPES
 ========================================================= */
 
-type InvoiceStatus = "Matched" | "Pending" | "Error";
+type InvoiceStatus = "PROCESSING" | "MATCH" | "MISMATCH" | "FAILED";
 
 interface Invoice {
   id: string;
@@ -149,9 +149,10 @@ export default function InvoiceDetailsPage() {
      Status styles
   ------------------------------------------------------- */
   const statusStyles: Record<InvoiceStatus, string> = {
-    Matched: "border-emerald-100 bg-emerald-50 text-emerald-700",
-    Pending: "border-amber-100 bg-amber-50 text-amber-700",
-    Error: "border-red-100 bg-red-50 text-red-700",
+    PROCESSING: "border-blue-100 bg-blue-50 text-blue-700",
+    MATCH: "border-emerald-100 bg-emerald-50 text-emerald-700",
+    MISMATCH: "border-amber-100 bg-amber-50 text-amber-700",
+    FAILED: "border-red-100 bg-red-50 text-red-700",
   };
 
   /* -------------------------------------------------------
